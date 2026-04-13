@@ -193,35 +193,33 @@ public class PatientController {
         if (patient != null) {
             model.addAttribute("patient", patient);
             model.addAttribute("appointments", appointmentService.findByPatientId(patient.getId()));
-            model.addAttribute("doctors", doctorService.findApproved());
         }
         return "patient/appointments";
     }
 
     @PostMapping("/appointments/book")
-    public String bookAppointment(@RequestParam Long doctorId,
-                                  @RequestParam String scheduledAt,
+    public String bookAppointment(@RequestParam(required = false) String preferredDateNote,
+                                  @RequestParam(required = false) String preferredDate,
                                   @RequestParam(required = false) String notes,
                                   HttpSession session, RedirectAttributes ra) {
         Patient patient = getSessionPatient(session);
         if (patient == null) return "redirect:/auth/patient/login";
-        Doctor doctor = doctorService.findById(doctorId).orElse(null);
-        if (doctor == null) { ra.addFlashAttribute("error", "Invalid doctor."); return "redirect:/patient/appointments"; }
 
         Appointment appt = new Appointment();
-        appt.setPatient(patient); appt.setDoctor(doctor);
-        appt.setScheduledAt(LocalDateTime.parse(scheduledAt.replace("T", "T").length() == 16 ? scheduledAt + ":00" : scheduledAt));
+        appt.setPatient(patient);
+        appt.setPreferredDateNote(preferredDateNote);
         appt.setNotes(notes);
+        if (preferredDate != null && !preferredDate.isBlank()) {
+            try { appt.setPreferredDate(java.time.LocalDate.parse(preferredDate)); } catch (Exception ignored) {}
+        }
         appointmentService.book(appt);
 
-        notificationService.send(doctor.getUser().getId(), "DOCTOR",
-                "New Appointment", "Patient " + patient.getUser().getFullName() + " booked an appointment.", "INFO");
-        
-        // Email notification to patient
-        emailService.sendAppointmentBookingNotification(patient.getUser().getEmail(), 
-            patient.getUser().getFullName(), doctor.getUser().getFullName(), appt.getScheduledAt().toString());
-            
-        ra.addFlashAttribute("success", "Appointment booked and confirmation email sent.");
+        notificationService.send(patient.getUser().getId(), "PATIENT",
+                "Appointment Request Submitted",
+                "Your appointment request has been received. Our reception team will assign a doctor and confirm your schedule shortly.",
+                "INFO");
+
+        ra.addFlashAttribute("success", "Appointment request submitted! Reception will assign a doctor and confirm your schedule.");
         return "redirect:/patient/appointments";
     }
 
@@ -266,6 +264,7 @@ public class PatientController {
 
     @PostMapping("/reports/add")
     public String addReport(@RequestParam String title,
+                            @RequestParam String type,
                             @RequestParam(required = false) String description,
                             @RequestParam String results,
                             @RequestParam(required = false) MultipartFile reportFile,
@@ -277,6 +276,12 @@ public class PatientController {
             MedicalReport report = new MedicalReport();
             report.setPatient(patient);
             report.setTitle(title);
+            try {
+                report.setType(MedicalReport.ReportType.valueOf(type));
+            } catch (Exception e) {
+                report.setType(MedicalReport.ReportType.OTHER);
+            }
+            report.setStatus(MedicalReport.ReportStatus.PENDING);
             report.setDescription(description);
             report.setResults(results);
 

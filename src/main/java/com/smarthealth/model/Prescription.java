@@ -39,6 +39,12 @@ public class Prescription {
     @Column
     private LocalDate validUntil;
 
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
+    @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<PrescribedMedicine> prescribedMedicinesList = new java.util.ArrayList<>();
+
     @PrePersist
     protected void onCreate() { createdAt = LocalDateTime.now(); }
 
@@ -59,4 +65,8 @@ public class Prescription {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDate getValidUntil() { return validUntil; }
     public void setValidUntil(LocalDate validUntil) { this.validUntil = validUntil; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
+    public java.util.List<PrescribedMedicine> getPrescribedMedicinesList() { return prescribedMedicinesList; }
+    public void setPrescribedMedicinesList(java.util.List<PrescribedMedicine> prescribedMedicinesList) { this.prescribedMedicinesList = prescribedMedicinesList; }
 }

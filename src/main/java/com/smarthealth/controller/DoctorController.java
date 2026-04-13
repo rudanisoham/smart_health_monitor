@@ -40,6 +40,7 @@ public class DoctorController {
             model.addAttribute("doctor", doctor);
             model.addAttribute("appointments", appointmentService.findByDoctorId(doctor.getId()));
             model.addAttribute("appointmentCount", appointmentService.countByDoctorId(doctor.getId()));
+            model.addAttribute("todayCount", appointmentService.countTodayByDoctorId(doctor.getId()));
             model.addAttribute("unreadCount", notificationService.countUnread(doctor.getUser().getId()));
         }
         return "doctor/dashboard";
@@ -110,11 +111,18 @@ public class DoctorController {
         return "doctor/prescriptions";
     }
 
+    @Autowired private PdfService pdfService;
+
     @PostMapping("/prescriptions/add")
     public String addPrescription(@RequestParam Long patientId,
                                   @RequestParam String diagnosis,
-                                  @RequestParam String medicines,
+                                  @RequestParam(required = false) String medicines,
                                   @RequestParam(required = false) String instructions,
+                                  @RequestParam(required = false) String notes,
+                                  @RequestParam(value="medicineName[]", required=false) String[] medicineNames,
+                                  @RequestParam(value="dosage[]", required=false) String[] dosages,
+                                  @RequestParam(value="timing[]", required=false) String[] timings,
+                                  @RequestParam(value="duration[]", required=false) String[] durations,
                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate validUntil,
                                   HttpSession session, RedirectAttributes ra) {
         Doctor doctor = getSessionDoctor(session);
@@ -128,14 +136,42 @@ public class DoctorController {
 
         Prescription p = new Prescription();
         p.setDoctor(doctor); p.setPatient(patient);
-        p.setDiagnosis(diagnosis); p.setMedicines(medicines);
+        p.setDiagnosis(diagnosis); 
+        p.setMedicines(medicines != null ? medicines : "See structured list");
         p.setInstructions(instructions);
+        p.setNotes(notes);
         p.setValidUntil(validUntil);
+        
+        java.util.List<PrescribedMedicine> structuredMedList = new java.util.ArrayList<>();
+        if (medicineNames != null) {
+            for (int i = 0; i < medicineNames.length; i++) {
+                if(medicineNames[i] == null || medicineNames[i].trim().isEmpty()) continue;
+                PrescribedMedicine pm = new PrescribedMedicine();
+                pm.setPrescription(p);
+                pm.setMedicineName(medicineNames[i]);
+                pm.setDosage(dosages != null && dosages.length > i ? dosages[i] : "");
+                pm.setTiming(timings != null && timings.length > i ? timings[i] : "");
+                pm.setDuration(durations != null && durations.length > i ? durations[i] : "");
+                structuredMedList.add(pm);
+            }
+        }
+        p.setPrescribedMedicinesList(structuredMedList);
+        
         prescriptionService.save(p);
+
+        try {
+            byte[] pdf = pdfService.generatePrescriptionPdf(p);
+            if (patient.getUser().getEmail() != null) {
+                emailService.sendPrescriptionPdf(patient.getUser().getEmail(), patient.getUser().getFullName(), doctor.getUser().getFullName(), pdf);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Failed to generate or send pdf");
+        }
 
         notificationService.send(patient.getUser().getId(), "PATIENT",
                 "New Prescription", "Dr. " + doctor.getUser().getFullName() + " issued a prescription.", "INFO");
-        ra.addFlashAttribute("success", "Prescription created.");
+        ra.addFlashAttribute("success", "Prescription created and sent to patient's email.");
         return "redirect:/doctor/prescriptions";
     }
 
@@ -228,6 +264,37 @@ public class DoctorController {
             model.addAttribute("doctor", doctor);
         }
         return "doctor/report-view";
+    }
+
+    @PostMapping("/reports/{id}/review")
+    public String reviewReport(@PathVariable Long id,
+                               @RequestParam String status,
+                               @RequestParam(required = false) String doctorComments,
+                               HttpSession session, RedirectAttributes ra) {
+        Doctor doctor = getSessionDoctor(session);
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        
+        MedicalReport report = medicalReportService.findById(id).orElse(null);
+        if (report != null) {
+            try {
+                report.setStatus(MedicalReport.ReportStatus.valueOf(status));
+            } catch (Exception e) {}
+            report.setDoctorComments(doctorComments);
+            medicalReportService.save(report);
+            
+            // Notify patient via email
+            if (report.getPatient().getUser().getEmail() != null) {
+                emailService.sendReportUpdate(report.getPatient().getUser().getEmail(), 
+                    report.getPatient().getUser().getFullName(), report.getTitle(), report.getStatus().toString());
+            }
+            notificationService.send(report.getPatient().getUser().getId(), "PATIENT",
+                "Report Updated", "Dr. " + doctor.getUser().getFullName() + " has reviewed your report: " + report.getTitle(), "INFO");
+            
+            ra.addFlashAttribute("success", "Review saved and patient notified.");
+        } else {
+            ra.addFlashAttribute("error", "Report not found.");
+        }
+        return "redirect:/doctor/reports/" + id;
     }
 
     @GetMapping("/diagnosis/add")

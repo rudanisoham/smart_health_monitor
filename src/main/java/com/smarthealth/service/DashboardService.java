@@ -26,6 +26,7 @@ public class DashboardService {
         stats.put("pendingDoctors", doctorRepository.findByIsApprovedFalse().size());
         stats.put("totalPatients", patientRepository.count());
         stats.put("totalAppointments", appointmentRepository.count());
+        stats.put("awaitingAssignment", appointmentRepository.countByStatus("AWAITING_ASSIGNMENT"));
         return stats;
     }
 }

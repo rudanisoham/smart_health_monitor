@@ -115,4 +115,73 @@ public class EmailService {
             e.printStackTrace();
         }
     }
+
+    public void sendPrescriptionPdf(String to, String patientName, String doctorName, byte[] pdfData) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(to);
+            helper.setSubject("Your Prescription - Smart Health Monitor");
+            
+            String content = "Dear " + patientName + ",\n\n" +
+                             "Attached is your prescription from Dr. " + doctorName + ".\n\n" +
+                             "Regards,\nSmart Health Monitor";
+            
+            helper.setText(content);
+            helper.addAttachment("Prescription.pdf", new org.springframework.core.io.ByteArrayResource(pdfData));
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendAppointmentAssignedByReception(String to, String patientName, String doctorName, String specialty, String scheduledAt) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(to);
+            helper.setSubject("Appointment Assigned — Smart Health Monitor");
+            String content = "<div style='font-family:Arial,sans-serif;padding:20px;border:1px solid #3b82f6;border-radius:12px;max-width:520px;'>" +
+                "<h2 style='color:#1d4ed8;'>Appointment Confirmed by Reception</h2>" +
+                "<p>Dear <strong>" + patientName + "</strong>,</p>" +
+                "<p>Our reception team has reviewed your appointment request and assigned a doctor for you.</p>" +
+                "<div style='background:#eff6ff;padding:15px;border-radius:8px;margin:20px 0;border-left:4px solid #3b82f6;'>" +
+                "<p style='margin:0 0 8px 0;'><strong>Doctor:</strong> Dr. " + doctorName + "</p>" +
+                "<p style='margin:0 0 8px 0;'><strong>Specialty:</strong> " + specialty + "</p>" +
+                "<p style='margin:0;'><strong>Scheduled For:</strong> " + scheduledAt + "</p>" +
+                "</div>" +
+                "<p>Please be available at the scheduled time. The doctor will confirm your appointment shortly.</p>" +
+                "<hr style='border:none;border-top:1px solid #ddd;margin-top:20px;'>" +
+                "<p style='font-size:0.85rem;color:#6b7280;'>© 2026 Smart Health Monitor Project.</p>" +
+                "</div>";
+            helper.setText(content, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendReportUpdate(String to, String patientName, String title, String status) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(to);
+            helper.setSubject("Medical Report Update - Smart Health Monitor");
+            
+            String content = "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #3b82f6; border-radius: 12px; max-width: 500px;'>" +
+                             "<h2 style='color: #3b82f6;'>Report Status Updated</h2>" +
+                             "<p>Dear " + patientName + ",</p>" +
+                             "<p>Your medical report <strong>" + title + "</strong> has been updated.</p>" +
+                             "<p>New Status: <strong>" + status + "</strong></p>" +
+                             "<p>Please log in to your portal to view the details.</p>" +
+                             "<hr style='border: none; border-top: 1px solid #ddd; margin-top: 20px;'>" +
+                             "<p style='font-size: 0.85rem; color: #6b7280;'>© 2026 Smart Health Monitor Project.</p>" +
+                             "</div>";
+            
+            helper.setText(content, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
 }

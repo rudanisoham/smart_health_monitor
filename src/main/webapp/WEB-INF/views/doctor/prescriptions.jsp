@@ -52,12 +52,24 @@
                             <input type="text" id="diagnosis" name="diagnosis" class="form-control" placeholder="e.g. Acute Bronchitis" required>
                         </div>
                         <div class="form-group">
-                            <label for="medicines">Medicines</label>
-                            <textarea id="medicines" name="medicines" class="form-control" rows="3" placeholder="List medicines and dosages..." required></textarea>
+                            <label>Medicines (Structured List)</label>
+                            <div id="medicine-list">
+                                <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="medicineName[]" class="form-control" placeholder="Medicine Name" required>
+                                    <input type="text" name="dosage[]" class="form-control" placeholder="Dosage (e.g. 500mg)" required>
+                                    <input type="text" name="timing[]" class="form-control" placeholder="Timing (e.g. 1-0-1)" required>
+                                    <input type="text" name="duration[]" class="form-control" placeholder="Duration (e.g. 5 days)" required>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm mt-1" onclick="addMedicineRow()">+ Add Medicine</button>
                         </div>
                         <div class="form-group mt-3">
                             <label for="instructions">Special Instructions (Optional)</label>
                             <textarea id="instructions" name="instructions" class="form-control" rows="2" placeholder="Take with food, avoid alcohol, etc."></textarea>
+                        </div>
+                        <div class="form-group mt-3">
+                            <label for="notes">Doctor Notes (Optional)</label>
+                            <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Private notes or observations"></textarea>
                         </div>
                         <div class="form-group mt-3">
                             <label for="validUntil">Valid Until (Optional)</label>
@@ -122,5 +134,21 @@
     </main>
 </div>
 <script src="<%= request.getContextPath() %>/assets/js/admin.js?v=3"></script>
+<script>
+function addMedicineRow() {
+    const list = document.getElementById('medicine-list');
+    const row = document.createElement('div');
+    row.className = 'grid';
+    row.style = 'grid-template-columns: 1fr 1fr 1fr 1fr 30px; gap: 0.5rem; margin-bottom: 0.5rem; align-items: start;';
+    row.innerHTML = `
+        <input type="text" name="medicineName[]" class="form-control" placeholder="Medicine Name" required>
+        <input type="text" name="dosage[]" class="form-control" placeholder="Dosage" required>
+        <input type="text" name="timing[]" class="form-control" placeholder="Timing" required>
+        <input type="text" name="duration[]" class="form-control" placeholder="Duration" required>
+        <button type="button" class="btn btn-danger btn-sm" style="padding: 0.25rem 0.5rem;" onclick="this.parentElement.remove()">X</button>
+    `;
+    list.appendChild(row);
+}
+</script>
 </body>
 </html>

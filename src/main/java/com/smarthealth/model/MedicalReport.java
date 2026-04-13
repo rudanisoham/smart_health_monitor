@@ -56,4 +56,39 @@ public class MedicalReport {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "report_type")
+    private ReportType type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "report_status")
+    private ReportStatus status;
+
+    @Column(columnDefinition = "TEXT")
+    private String doctorComments;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prescription_id")
+    private Prescription prescription;
+
+    public ReportType getType() { return type; }
+    public void setType(ReportType type) { this.type = type; }
+
+    public ReportStatus getStatus() { return status; }
+    public void setStatus(ReportStatus status) { this.status = status; }
+
+    public String getDoctorComments() { return doctorComments; }
+    public void setDoctorComments(String doctorComments) { this.doctorComments = doctorComments; }
+
+    public Prescription getPrescription() { return prescription; }
+    public void setPrescription(Prescription prescription) { this.prescription = prescription; }
+
+    public enum ReportType {
+        BLOOD_TEST, X_RAY, MRI, ECG, CT_SCAN, URINE_TEST, OTHER
+    }
+
+    public enum ReportStatus {
+        NORMAL, ABNORMAL, PENDING, REVIEWED
+    }
 }

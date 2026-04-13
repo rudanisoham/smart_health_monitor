@@ -32,6 +32,9 @@ public class AuthController {
     @GetMapping("/patient/login")
     public String patientLogin() { return "auth/patient-login"; }
 
+    @GetMapping("/reception/login")
+    public String receptionLogin() { return "auth/reception-login"; }
+
     @GetMapping("/patient/register")
     public String patientRegister(Model model) { return "auth/patient-register"; }
 
@@ -40,6 +43,9 @@ public class AuthController {
         model.addAttribute("departments", departmentService.findAll());
         return "auth/doctor-register";
     }
+
+    @GetMapping("/reception/login")
+    public String receptionLogin() { return "auth/reception-login"; }
 
     // ── POST login ────────────────────────────────────────────────────────
     @PostMapping("/login")
@@ -66,10 +72,11 @@ public class AuthController {
         }
         logService.info("User logged in: " + user.getEmail(), user.getFullName());
         switch (user.getRole()) {
-            case ADMIN:   return "redirect:/admin/dashboard";
-            case DOCTOR:  return "redirect:/doctor/dashboard";
-            case PATIENT: return "redirect:/patient/dashboard";
-            default:      return "redirect:/";
+            case ADMIN:        return "redirect:/admin/dashboard";
+            case DOCTOR:       return "redirect:/doctor/dashboard";
+            case PATIENT:      return "redirect:/patient/dashboard";
+            case RECEPTIONIST: return "redirect:/reception/dashboard";
+            default:           return "redirect:/";
         }
     }
 

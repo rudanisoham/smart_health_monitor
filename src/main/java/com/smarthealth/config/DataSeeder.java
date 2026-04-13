@@ -23,6 +23,7 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
     @Autowired private DepartmentRepository departmentRepository;
     @Autowired private SiteContentRepository siteContentRepository;
     @Autowired private SiteFeatureRepository siteFeatureRepository;
+    @Autowired private javax.sql.DataSource dataSource;
 
     private boolean seeded = false;
 
@@ -30,6 +31,52 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (seeded) return;
         seeded = true;
+        
+        try (java.sql.Connection conn = dataSource.getConnection(); 
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE users MODIFY COLUMN role VARCHAR(50)");
+            System.out.println("INFO: Users table role column altered to VARCHAR(50) successfully.");
+        } catch (Exception e) {
+            System.out.println("INFO: Could not alter users table (might not exist yet or already altered): " + e.getMessage());
+        }
+
+        // Fix NULL values in assigned_by_reception column for existing rows
+        try (java.sql.Connection conn = dataSource.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("UPDATE appointments SET assigned_by_reception = 0 WHERE assigned_by_reception IS NULL");
+            System.out.println("INFO: Fixed NULL assigned_by_reception values in appointments table.");
+        } catch (Exception e) {
+            System.out.println("INFO: Could not fix assigned_by_reception (table may not exist yet): " + e.getMessage());
+        }
+
+        // Make doctor_id nullable to support reception-assigned appointments
+        try (java.sql.Connection conn = dataSource.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE appointments MODIFY COLUMN doctor_id BIGINT NULL");
+            System.out.println("INFO: appointments.doctor_id made nullable successfully.");
+        } catch (Exception e) {
+            System.out.println("INFO: Could not alter appointments.doctor_id (may already be nullable): " + e.getMessage());
+        }
+
+        // Make scheduledAt nullable to support reception-assigned appointments
+        try (java.sql.Connection conn = dataSource.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE appointments MODIFY COLUMN scheduledAt DATETIME NULL");
+            System.out.println("INFO: appointments.scheduledAt made nullable successfully.");
+        } catch (Exception e) {
+            System.out.println("INFO: Could not alter appointments.scheduledAt (may already be nullable): " + e.getMessage());
+        }
+
+        // Add token_number, estimated_time, preferred_date columns if missing
+        try (java.sql.Connection conn = dataSource.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS token_number INT NULL");
+            stmt.execute("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS estimated_time DATETIME NULL");
+            stmt.execute("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS preferred_date DATE NULL");
+            System.out.println("INFO: appointments token/estimated/preferred_date columns ensured.");
+        } catch (Exception e) {
+            System.out.println("INFO: Could not add token columns (may already exist): " + e.getMessage());
+        }
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -43,6 +90,30 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
             admin.setPhone("9999999999");
             admin.setActive(true);
             userRepository.save(admin);
+        }
+
+        // Seed receptionist user
+        if (!userRepository.existsByEmail("reception@health.com")) {
+            User reception = new User();
+            reception.setFullName("Front Desk");
+            reception.setEmail("reception@health.com");
+            reception.setPassword(encoder.encode("reception123"));
+            reception.setRole(Role.RECEPTIONIST);
+            reception.setPhone("8888888888");
+            reception.setActive(true);
+            userRepository.save(reception);
+        }
+
+        // Seed reception user
+        if (!userRepository.existsByEmail("reception@health.com")) {
+            User reception = new User();
+            reception.setFullName("Front Desk");
+            reception.setEmail("reception@health.com");
+            reception.setPassword(encoder.encode("reception123"));
+            reception.setRole(Role.RECEPTIONIST);
+            reception.setPhone("8888888888");
+            reception.setActive(true);
+            userRepository.save(reception);
         }
 
         // Seed departments

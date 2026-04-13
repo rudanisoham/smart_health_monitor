@@ -88,8 +88,8 @@
         <h2 class="section-title text-primary fs-3 mb-10">Access Our Panels</h2>
         <div class="row gy-5">
             <!-- Patient Card -->
-            <div class="col-lg-4 col-md-6">
-                <div class="glass-card panel-card p-5 border-0 bg-light shadow-sm text-center">
+            <div class="col-lg-3 col-md-6">
+                <div class="glass-card panel-card p-5 border-0 bg-light shadow-sm text-center h-100">
                     <div class="rounded-circle bg-primary bg-opacity-25 p-4 d-inline-flex mb-4 text-primary">
                         <i class="bi bi-person fs-1"></i>
                     </div>
@@ -99,8 +99,8 @@
                 </div>
             </div>
             <!-- Doctor Card -->
-            <div class="col-lg-4 col-md-6">
-                <div class="glass-card panel-card p-5 bg-white border-0 shadow-lg text-center" style="transform: scale(1.05); z-index: 1;">
+            <div class="col-lg-3 col-md-6">
+                <div class="glass-card panel-card p-5 bg-white border-0 shadow-lg text-center h-100" style="transform: scale(1.05); z-index: 1;">
                     <div class="rounded-circle bg-success bg-opacity-25 p-4 d-inline-flex mb-4 text-success">
                         <i class="bi bi-person-badge fs-1"></i>
                     </div>
@@ -110,14 +110,25 @@
                 </div>
             </div>
             <!-- Admin Card -->
-            <div class="col-lg-4 col-md-6">
-                <div class="glass-card panel-card p-5 border-0 bg-light shadow-sm text-center">
+            <div class="col-lg-3 col-md-6">
+                <div class="glass-card panel-card p-5 border-0 bg-light shadow-sm text-center h-100">
                     <div class="rounded-circle bg-danger bg-opacity-25 p-4 d-inline-flex mb-4 text-danger">
                         <i class="bi bi-person-lock fs-1"></i>
                     </div>
                     <h3 class="fw-bold mb-3">Admin Panel</h3>
-                    <p class="text-secondary mb-5">Oversee system operations, manage staff, and analyze organizational data & logs.</p>
+                    <p class="text-secondary mb-5">Oversee system operations, manage staff, and analyze organizational data.</p>
                     <a href="${pageContext.request.contextPath}/auth/admin/login" class="btn btn-danger rounded-pill px-5 py-2 w-100 shadow-sm border-0">Login as Admin</a>
+                </div>
+            </div>
+            <!-- Reception Card -->
+            <div class="col-lg-3 col-md-6">
+                <div class="glass-card panel-card p-5 border-0 bg-light shadow-sm text-center h-100">
+                    <div class="rounded-circle bg-warning bg-opacity-25 p-4 d-inline-flex mb-4 text-warning">
+                        <i class="bi bi-front fs-1"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3">Reception Panel</h3>
+                    <p class="text-secondary mb-5">Manage patient admissions, assign departments, and maintain hospital queue flow.</p>
+                    <a href="${pageContext.request.contextPath}/auth/reception/login" class="btn btn-warning text-white rounded-pill px-5 py-2 w-100 shadow-sm border-0">Login Reception</a>
                 </div>
             </div>
         </div>

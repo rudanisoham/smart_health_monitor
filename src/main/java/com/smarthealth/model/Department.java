@@ -31,6 +31,18 @@ public class Department {
     
     @Column(columnDefinition = "TEXT")
     private String description;
+    
+    @Column(nullable = false, columnDefinition="int default 0")
+    private Integer totalBeds = 0;
+    
+    @Column(nullable = false, columnDefinition="int default 0")
+    private Integer availableBeds = 0;
+    
+    @Column(nullable = false, columnDefinition="int default 0")
+    private Integer occupiedBeds = 0;
+    
+    @Column(nullable = false, columnDefinition="int default 0")
+    private Integer icuBeds = 0;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -53,4 +65,12 @@ public class Department {
     public void setEmergencyPhone(String emergencyPhone) { this.emergencyPhone = emergencyPhone; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public Integer getTotalBeds() { return totalBeds; }
+    public void setTotalBeds(Integer totalBeds) { this.totalBeds = totalBeds; }
+    public Integer getAvailableBeds() { return availableBeds; }
+    public void setAvailableBeds(Integer availableBeds) { this.availableBeds = availableBeds; }
+    public Integer getOccupiedBeds() { return occupiedBeds; }
+    public void setOccupiedBeds(Integer occupiedBeds) { this.occupiedBeds = occupiedBeds; }
+    public Integer getIcuBeds() { return icuBeds; }
+    public void setIcuBeds(Integer icuBeds) { this.icuBeds = icuBeds; }
 }

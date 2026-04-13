@@ -71,6 +71,24 @@
                                 </c:choose>
                             </div>
                         </c:if>
+
+                        <div class="mt-8 pt-6 border-top">
+                            <h3 style="font-size:1.1rem; margin-bottom:1.25rem;">Doctor's Review</h3>
+                            <form action="${pageContext.request.contextPath}/doctor/reports/${report.id}/review" method="post" style="background:#f8fafc; padding: 2rem; border-radius: 12px; border: 1px solid var(--border);">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select name="status" class="form-control" style="width: auto;" required>
+                                        <option value="PENDING" ${report.status == 'PENDING' ? 'selected' : ''}>Pending</option>
+                                        <option value="REVIEWED" ${report.status == 'REVIEWED' ? 'selected' : ''}>Reviewed</option>
+                                    </select>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Doctor's Comments</label>
+                                    <textarea name="doctorComments" class="form-control" rows="4" placeholder="Add your clinical observations here...">${report.doctorComments}</textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Review & Notify Patient</button>
+                            </form>
+                        </div>
                     </div>
                 </c:when>
                 <c:otherwise>

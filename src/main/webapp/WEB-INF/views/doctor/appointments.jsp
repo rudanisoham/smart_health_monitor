@@ -85,6 +85,7 @@
                                         <td class="muted" style="max-width:180px;">${appt.notes != null ? appt.notes : '—'}</td>
                                         <td>
                                             <c:choose>
+                                                <c:when test="${appt.status == 'AWAITING_ASSIGNMENT'}"><span class="chip-warning">⏳ Awaiting Reception</span></c:when>
                                                 <c:when test="${appt.status == 'PENDING'}"><span class="chip-warning">⏳ Pending</span></c:when>
                                                 <c:when test="${appt.status == 'CONFIRMED'}"><span class="chip">✓ Confirmed</span></c:when>
                                                 <c:when test="${appt.status == 'COMPLETED'}"><span class="chip-neutral">✅ Completed</span></c:when>

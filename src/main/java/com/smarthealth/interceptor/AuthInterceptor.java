@@ -42,6 +42,14 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
         }
 
+        // Receptionist Access Control
+        if (path.startsWith("/reception")) {
+            if (sessionUser == null || sessionUser.getRole() != com.smarthealth.model.Role.RECEPTIONIST) {
+                response.sendRedirect(request.getContextPath() + "/auth/reception/login?error=unauthorized");
+                return false;
+            }
+        }
+
         return true;
     }
 }

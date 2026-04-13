@@ -22,6 +22,7 @@ public class AdminController {
     @Autowired private AppointmentService appointmentService;
     @Autowired private SystemLogService logService;
     @Autowired private DashboardService dashboardService;
+    @Autowired private BedService bedService;
 
     // ── Dashboard ─────────────────────────────────────────────────────────
     @GetMapping({"", "/", "/dashboard"})
@@ -192,10 +193,16 @@ public class AdminController {
     public String saveDepartment(@ModelAttribute Department department, HttpSession session, RedirectAttributes ra) {
         department.setStatus("ACTIVE");
         department.setCurrOccupancy(0);
-        departmentService.save(department);
+        if (department.getTotalBeds() == null) department.setTotalBeds(0);
+        if (department.getIcuBeds() == null) department.setIcuBeds(0);
+        department.setAvailableBeds(department.getTotalBeds());
+        department.setOccupiedBeds(0);
+        Department saved = departmentService.save(department);
+        // Auto-create individual bed records
+        bedService.initBedsForDepartment(saved);
         User admin = (User) session.getAttribute("sessionUser");
         logService.info("Department added: " + department.getName(), admin != null ? admin.getFullName() : "Admin");
-        ra.addFlashAttribute("success", "Department added.");
+        ra.addFlashAttribute("success", "Department added with " + saved.getTotalBeds() + " beds.");
         return "redirect:/admin/departments";
     }
 
@@ -206,6 +213,76 @@ public class AdminController {
         logService.warn("Department deleted, ID=" + id, admin != null ? admin.getFullName() : "Admin");
         ra.addFlashAttribute("success", "Department deleted.");
         return "redirect:/admin/departments";
+    }
+
+    @GetMapping("/departments/{id}/view")
+    public String viewDepartment(@PathVariable Long id, Model model) {
+        Department dept = departmentService.findById(id).orElse(null);
+        model.addAttribute("department", dept);
+        if (dept != null) {
+            model.addAttribute("doctors", doctorService.findAll().stream()
+                    .filter(d -> d.getDepartment() != null && d.getDepartment().getId().equals(id))
+                    .toList());
+            model.addAttribute("beds", bedService.findByDepartmentId(id));
+        }
+        return "admin/view-department";
+    }
+
+    @GetMapping("/departments/{id}/edit")
+    public String editDepartmentForm(@PathVariable Long id, Model model, RedirectAttributes ra) {
+        Department dept = departmentService.findById(id).orElse(null);
+        if (dept == null) { ra.addFlashAttribute("error", "Department not found."); return "redirect:/admin/departments"; }
+        model.addAttribute("department", dept);
+        return "admin/edit-department";
+    }
+
+    @PostMapping("/departments/{id}/edit")
+    public String updateDepartment(@PathVariable Long id,
+                                   @RequestParam String name,
+                                   @RequestParam String code,
+                                   @RequestParam Integer targetCapacity,
+                                   @RequestParam(required = false) String description,
+                                   @RequestParam(required = false) String headName,
+                                   @RequestParam(required = false) String physicalLocation,
+                                   @RequestParam(required = false) String emergencyPhone,
+                                   @RequestParam(required = false) String status,
+                                   @RequestParam(required = false, defaultValue = "0") Integer totalBeds,
+                                   @RequestParam(required = false, defaultValue = "0") Integer icuBeds,
+                                   HttpSession session, RedirectAttributes ra) {
+        Department dept = departmentService.findById(id).orElse(null);
+        if (dept == null) { ra.addFlashAttribute("error", "Department not found."); return "redirect:/admin/departments"; }
+
+        dept.setName(name);
+        dept.setCode(code);
+        dept.setTargetCapacity(targetCapacity);
+        dept.setDescription(description);
+        dept.setHeadName(headName);
+        dept.setPhysicalLocation(physicalLocation);
+        dept.setEmergencyPhone(emergencyPhone);
+        if (status != null) dept.setStatus(status);
+
+        // Update bed capacity if changed
+        int oldTotal = dept.getTotalBeds() != null ? dept.getTotalBeds() : 0;
+        int oldIcu   = dept.getIcuBeds()   != null ? dept.getIcuBeds()   : 0;
+        int safeIcu  = Math.min(icuBeds, totalBeds);
+
+        if (totalBeds != oldTotal || safeIcu != oldIcu) {
+            dept.setTotalBeds(totalBeds);
+            dept.setIcuBeds(safeIcu);
+            // Recalculate available = total - occupied (keep occupied as-is)
+            int occupied = dept.getOccupiedBeds() != null ? dept.getOccupiedBeds() : 0;
+            dept.setAvailableBeds(Math.max(0, totalBeds - occupied));
+            departmentService.save(dept);
+            // Regenerate bed records to match new totals
+            bedService.syncBedsForDepartment(dept);
+        } else {
+            departmentService.save(dept);
+        }
+
+        User admin = (User) session.getAttribute("sessionUser");
+        logService.info("Department updated: " + name, admin != null ? admin.getFullName() : "Admin");
+        ra.addFlashAttribute("success", "Department updated successfully.");
+        return "redirect:/admin/departments/" + id + "/view";
     }
 
     // ── Reports / Logs / Settings ─────────────────────────────────────────

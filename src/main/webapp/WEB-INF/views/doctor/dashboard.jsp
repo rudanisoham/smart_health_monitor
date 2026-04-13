@@ -36,10 +36,7 @@
             <div class="grid grid-4">
                 <div class="card">
                     <div class="card-header">
-                        <div>
-                            <div class="card-title">Total Appointments</div>
-                            <div class="muted mt-1">All time</div>
-                        </div>
+                        <div><div class="card-title">Total Appointments</div><div class="muted mt-1">All time</div></div>
                         <span class="chip">📅</span>
                     </div>
                     <div class="card-value">${appointmentCount != null ? appointmentCount : 0}</div>
@@ -47,10 +44,15 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <div>
-                            <div class="card-title">Pending</div>
-                            <div class="muted mt-1">Awaiting confirmation</div>
-                        </div>
+                        <div><div class="card-title">Today's Appointments</div><div class="muted mt-1">Assigned for today</div></div>
+                        <span class="chip" style="background:#eff6ff;color:#1d4ed8;">📋</span>
+                    </div>
+                    <div class="card-value" style="color:#1d4ed8;">${todayCount != null ? todayCount : 0}</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div><div class="card-title">Pending</div><div class="muted mt-1">Awaiting confirmation</div></div>
                         <span class="chip-warning">⚠</span>
                     </div>
                     <div class="card-value">
@@ -64,27 +66,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <div>
-                            <div class="card-title">Confirmed</div>
-                            <div class="muted mt-1">Ready to attend</div>
-                        </div>
-                        <span class="chip">✓</span>
-                    </div>
-                    <div class="card-value">
-                        <c:set var="confirmedCount" value="0"/>
-                        <c:forEach var="a" items="${appointments}">
-                            <c:if test="${a.status == 'CONFIRMED'}"><c:set var="confirmedCount" value="${confirmedCount + 1}"/></c:if>
-                        </c:forEach>
-                        ${confirmedCount}
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <div>
-                            <div class="card-title">Unread Alerts</div>
-                            <div class="muted mt-1">Notifications</div>
-                        </div>
+                        <div><div class="card-title">Unread Alerts</div><div class="muted mt-1">Notifications</div></div>
                         <span class="chip-danger">🔔</span>
                     </div>
                     <div class="card-value">${unreadCount != null ? unreadCount : 0}</div>
@@ -190,7 +172,12 @@
                                                         <c:otherwise><span class="chip-danger" style="font-size:0.7rem;margin-left:0.4rem;">${appt.status}</span></c:otherwise>
                                                     </c:choose>
                                                 </div>
-                                                <div class="timeline-meta">${appt.scheduledAt.toString().replace('T',' ').substring(0,16)}
+                                                <div class="timeline-meta">
+                                                    <c:choose>
+                                                        <c:when test="${appt.scheduledAt != null}">${appt.scheduledAt.toString().replace('T',' ').substring(0,16)}</c:when>
+                                                        <c:otherwise><span class="muted">Time TBD</span></c:otherwise>
+                                                    </c:choose>
+                                                    <c:if test="${appt.tokenNumber != null}"> · Token #${appt.tokenNumber}</c:if>
                                                     <c:if test="${appt.notes != null}"> · ${appt.notes}</c:if>
                                                 </div>
                                             </div>

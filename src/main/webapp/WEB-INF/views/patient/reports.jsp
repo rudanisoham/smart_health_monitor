@@ -42,6 +42,17 @@
                     <div class="section-subtitle mt-1">Upload or record results from your medical tests</div>
                     <form action="<%= request.getContextPath() %>/patient/reports/add" method="post" enctype="multipart/form-data" class="form-grid mt-3">
                         <div class="form-group">
+                            <label for="reportType">Report Type</label>
+                            <select name="type" id="reportType" class="form-control" required>
+                                <option value="BLOOD_TEST">Blood Test</option>
+                                <option value="X_RAY">X-Ray</option>
+                                <option value="MRI">MRI</option>
+                                <option value="CT_SCAN">CT Scan</option>
+                                <option value="URINE_TEST">Urine Test</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="reportTitle">Report Title / Test Name</label>
                             <input id="reportTitle" name="title" class="form-control" type="text" placeholder="e.g. Blood Test, Chest X-Ray" required>
                         </div>
