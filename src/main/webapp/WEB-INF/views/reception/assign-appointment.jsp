@@ -75,18 +75,33 @@
                     </div>
                 </div>
 
-                <!-- Assignment Form -->
+                <!-- Right: Assignment & Availability -->
                 <div class="card">
+                    <c:if test="${appointment.doctor != null}">
+                        <div style="padding:1rem; background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; margin-bottom:1.5rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:start;">
+                                <div style="flex:1;">
+                                    <div style="color:#9a3412; font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Patient's Choice</div>
+                                    <h4 style="color:#ea580c; font-size:1.15rem; margin:0.25rem 0;">Dr. ${appointment.doctor.user.fullName}</h4>
+                                    <p style="font-size:0.875rem; color:#c2410c; margin-top:0.25rem;">Specialty: ${appointment.doctor.specialty != null ? appointment.doctor.specialty : 'General'}</p>
+                                </div>
+                                <div style="background:#ffedd5; padding:0.5rem; border-radius:8px;">
+                                    <svg width="24" height="24" fill="none" stroke="#ea580c" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </c:if>
+
                     <div class="section-title">Assign Doctor & Schedule</div>
                     <div class="section-subtitle mt-1">Select doctor, set time — token is auto-generated</div>
 
                     <form action="${pageContext.request.contextPath}/reception/appointments/${appointment.id}/assign" method="post" class="form-grid mt-3">
                         <div class="form-group">
-                            <label for="doctorId">Select Doctor</label>
+                            <label for="doctorId">Confirm / Select Doctor</label>
                             <select id="doctorId" name="doctorId" class="form-select" required onchange="showSchedule(this.value)">
                                 <option value="">-- Choose a Doctor --</option>
                                 <c:forEach var="doc" items="${doctors}">
-                                    <option value="${doc.id}">
+                                    <option value="${doc.id}" ${doc.id == appointment.doctor.id ? 'selected' : ''}>
                                         Dr. ${doc.user.fullName}
                                         <c:if test="${doc.specialty != null}"> — ${doc.specialty}</c:if>
                                         <c:if test="${doc.department != null}"> (${doc.department.name})</c:if>
@@ -101,31 +116,43 @@
                                    required min="<%= minDt %>"
                                    value="${appointment.preferredDate != null ? appointment.preferredDate.toString().concat('T09:00') : ''}"
                                    onchange="updateTokenPreview()">
-                            <span class="muted" style="font-size:0.8rem;margin-top:0.25rem;">
-                                Patient prefers: <strong>
-                                    <c:choose>
-                                        <c:when test="${appointment.preferredDate != null}">${appointment.preferredDate}</c:when>
-                                        <c:otherwise>No date preference</c:otherwise>
-                                    </c:choose>
-                                </strong>
-                                <c:if test="${not empty appointment.preferredDateNote}"> · ${appointment.preferredDateNote}</c:if>
-                            </span>
                         </div>
 
                         <!-- Token Preview -->
-                        <div id="tokenPreview" style="display:none;padding:0.875rem 1rem;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;font-size:0.875rem;">
+                        <div id="tokenPreview" style="display:none;padding:0.875rem 1rem;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;font-size:0.875rem;margin-bottom:1rem;">
                             <div style="font-weight:700;color:#1d4ed8;margin-bottom:0.25rem;">Token Preview</div>
                             <div>Token #: <strong id="previewToken">—</strong></div>
                             <div>Estimated arrival: <strong id="previewEst">—</strong></div>
-                            <div class="muted" style="font-size:0.78rem;margin-top:0.25rem;">Based on existing appointments for this doctor on the selected date (20 min/slot)</div>
                         </div>
 
                         <div style="display:flex;gap:1rem;margin-top:0.5rem;">
-                            <button type="submit" class="btn btn-primary" style="flex:1;">✓ Assign & Generate Token</button>
-                            <a href="${pageContext.request.contextPath}/reception/appointments" class="btn btn-outline" style="flex:1;text-align:center;">Cancel</a>
+                            <button type="submit" class="btn btn-primary" style="flex:1;">✓ Assign & Payment</button>
                         </div>
                     </form>
+
+                    <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid #e2e8f0;">
+                        <details style="background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                            <summary style="padding:1rem; cursor:pointer; font-weight:600; color:#475569; user-select:none;">
+                                ⚠️ Doctor Unavailable? Suggest Reschedule
+                            </summary>
+                            <div style="padding:0 1rem 1rem 1rem;">
+                                <p style="font-size:0.85rem; color:#64748b; margin-bottom:1rem;">If the patient's selected doctor is busy or not available on the requested date, use this form to notify them.</p>
+                                <form action="${pageContext.request.contextPath}/reception/appointments/${appointment.id}/notify-unavailable" method="post">
+                                    <div class="form-group">
+                                        <label>Next Available From</label>
+                                        <input type="date" name="availableFrom" class="form-control" required min="<%= minDt.substring(0,10) %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Short Message to Patient</label>
+                                        <textarea name="message" class="form-control" rows="2" placeholder="e.g. Doctor is in surgery today. Available from tomorrow morning."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-outline btn-sm w-full" style="color:#d97706; border-color:#d97706; justify-content:center;">Send Reschedule Notice</button>
+                                </form>
+                            </div>
+                        </details>
+                    </div>
                 </div>
+
             </div>
 
             <!-- Doctor Schedule Panel -->
@@ -194,7 +221,37 @@ function showSchedule(doctorId) {
         }).join('');
     }
 
+    // Auto-advance the time based on the doctor's existing schedule
+    autoAdvanceScheduleTime(appts);
+
     updateTokenPreview();
+}
+
+function autoAdvanceScheduleTime(appts) {
+    if (appts.length === 0) return;
+    
+    // Find the latest appointment time among the existing appointments
+    let latestTimeMs = 0;
+    appts.forEach(a => {
+        if (a.time !== '—') {
+            const t = new Date(a.time.replace(' ', 'T')).getTime();
+            if (!isNaN(t) && t > latestTimeMs) latestTimeMs = t;
+        }
+    });
+    
+    if (latestTimeMs > 0) {
+        // Add 20 mins to the latest appointment
+        const nextTime = new Date(latestTimeMs + 20 * 60000);
+        
+        // Format for datetime-local: YYYY-MM-DDThh:mm
+        const ft = nextTime.getFullYear() + '-' +
+            String(nextTime.getMonth()+1).padStart(2,'0') + '-' +
+            String(nextTime.getDate()).padStart(2,'0') + 'T' +
+            String(nextTime.getHours()).padStart(2,'0') + ':' +
+            String(nextTime.getMinutes()).padStart(2,'0');
+            
+        document.getElementById('scheduledAt').value = ft;
+    }
 }
 
 function updateTokenPreview() {
@@ -202,19 +259,66 @@ function updateTokenPreview() {
     const dtVal    = document.getElementById('scheduledAt').value;
     if (!doctorId || !dtVal) { document.getElementById('tokenPreview').style.display = 'none'; return; }
 
-    const appts = scheduleMap[doctorId] || [];
-    const nextToken = appts.length + 1;
+    const selectedDateStr = dtVal.substring(0, 10);
+    const targetDateStr = '${targetDate}';
+    const isTargetDate = selectedDateStr === targetDateStr;
     const dt = new Date(dtVal);
-    const estDt = new Date(dt.getTime() + (nextToken - 1) * 20 * 60000);
-    const estStr = estDt.getFullYear() + '-' +
-        String(estDt.getMonth()+1).padStart(2,'0') + '-' +
-        String(estDt.getDate()).padStart(2,'0') + ' ' +
-        String(estDt.getHours()).padStart(2,'0') + ':' +
-        String(estDt.getMinutes()).padStart(2,'0');
 
-    document.getElementById('previewToken').textContent = nextToken;
-    document.getElementById('previewEst').textContent   = estStr;
-    document.getElementById('tokenPreview').style.display = 'block';
+    // Estimated time is EXACTLY what is in the scheduled field now
+    const estStr = dt.getFullYear() + '-' +
+        String(dt.getMonth()+1).padStart(2,'0') + '-' +
+        String(dt.getDate()).padStart(2,'0') + ' ' +
+        String(dt.getHours()).padStart(2,'0') + ':' +
+        String(dt.getMinutes()).padStart(2,'0');
+
+    if (isTargetDate) {
+        const appts = scheduleMap[doctorId] || [];
+        let maxToken = 0;
+        appts.forEach(a => {
+            const t = parseInt(a.token);
+            if (!isNaN(t) && t > maxToken) {
+                maxToken = t;
+            }
+        });
+        const nextToken = maxToken + 1;
+        document.getElementById('previewToken').textContent = nextToken;
+        document.getElementById('previewEst').textContent   = estStr;
+        document.getElementById('tokenPreview').style.display = 'block';
+    } else {
+        // Fetch max token dynamically for the new date!
+        const apiUrl = '<%= request.getContextPath() %>/reception/api/maxToken?doctorId=' + doctorId + '&date=' + selectedDateStr;
+        fetch(apiUrl)
+            .then(res => res.json())
+            .then(data => {
+                const nextToken = (data.maxToken || 0) + 1;
+                
+                let nextTimeStr = estStr;
+                if (data.latestTime) {
+                    const latestMs = new Date(data.latestTime).getTime();
+                    const nextTime = new Date(latestMs + 20 * 60000);
+                    nextTimeStr = nextTime.getFullYear() + '-' +
+                        String(nextTime.getMonth()+1).padStart(2,'0') + '-' +
+                        String(nextTime.getDate()).padStart(2,'0') + ' ' +
+                        String(nextTime.getHours()).padStart(2,'0') + ':' +
+                        String(nextTime.getMinutes()).padStart(2,'0');
+                    document.getElementById('scheduledAt').value = nextTimeStr.replace(' ', 'T');
+                } else {
+                    // Blank day! Reset to 09:00 AM.
+                    const resetTime = selectedDateStr + 'T09:00';
+                    document.getElementById('scheduledAt').value = resetTime;
+                    nextTimeStr = selectedDateStr + ' 09:00';
+                }
+
+                document.getElementById('previewToken').textContent = nextToken;
+                document.getElementById('previewEst').textContent   = nextTimeStr;
+                document.getElementById('tokenPreview').style.display = 'block';
+            })
+            .catch(err => {
+                document.getElementById('previewToken').textContent = "Auto on save";
+                document.getElementById('previewEst').textContent   = estStr;
+                document.getElementById('tokenPreview').style.display = 'block';
+            });
+    }
 }
 </script>
 <script src="<%= request.getContextPath() %>/assets/js/admin.js?v=3"></script>

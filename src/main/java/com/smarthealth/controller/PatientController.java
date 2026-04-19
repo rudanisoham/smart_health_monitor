@@ -18,6 +18,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/patient")
@@ -32,6 +34,7 @@ public class PatientController {
     @Autowired private UserService userService;
     @Autowired private MedicalReportService medicalReportService;
     @Autowired private SystemLogService systemLogService;
+    @Autowired private DoctorReviewService reviewService;
     @Autowired private EmailService emailService;
 
     private Patient getSessionPatient(HttpSession session) {
@@ -40,6 +43,61 @@ public class PatientController {
         return patientService.findByUserId(user.getId());
     }
 
+    // -- Doctor Profiles & Reviews --
+
+    @GetMapping("/doctor/{id}/profile")
+    public String doctorProfile(@PathVariable Long id, HttpSession session, Model model) {
+        Doctor doctor = doctorService.findById(id).orElse(null);
+        if (doctor == null) return "redirect:/patient/appointments";
+        
+        model.addAttribute("doctor", doctor);
+        model.addAttribute("reviews", reviewService.findByDoctorId(id));
+        model.addAttribute("reviewCount", reviewService.getReviewCount(id));
+        model.addAttribute("avgRating", reviewService.getAverageRating(id));
+        
+        return "patient/doctor-profile"; // Needs a jsp page!
+    }
+
+    @GetMapping("/reviews/new")
+    public String writeReviewForm(@RequestParam Long appointmentId, HttpSession session, Model model) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+        
+        Appointment appt = appointmentService.findById(appointmentId).orElse(null);
+        if (appt == null || !appt.getPatient().getId().equals(patient.getId()) || !"COMPLETED".equals(appt.getStatus())) {
+            return "redirect:/patient/appointments";
+        }
+        
+        model.addAttribute("appointment", appt);
+        return "patient/write-review";
+    }
+
+    @PostMapping("/reviews/submit")
+    public String submitReview(@RequestParam Long appointmentId,
+                               @RequestParam Integer rating,
+                               @RequestParam String comment,
+                               HttpSession session, RedirectAttributes ra) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+
+        Appointment appt = appointmentService.findById(appointmentId).orElse(null);
+        if (appt == null || !appt.getPatient().getId().equals(patient.getId())) {
+            ra.addFlashAttribute("error", "Invalid appointment.");
+            return "redirect:/patient/appointments";
+        }
+        
+        DoctorReview review = new DoctorReview();
+        review.setAppointment(appt);
+        review.setDoctor(appt.getDoctor());
+        review.setPatient(patient);
+        review.setRating(rating);
+        review.setComment(comment);
+        
+        reviewService.save(review);
+        
+        ra.addFlashAttribute("success", "Thank you! Your review for Dr. " + appt.getDoctor().getUser().getFullName() + " has been submitted.");
+        return "redirect:/patient/doctor/" + appt.getDoctor().getId() + "/profile";
+    }
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(HttpSession session, Model model) {
         Patient patient = getSessionPatient(session);
@@ -193,12 +251,23 @@ public class PatientController {
         if (patient != null) {
             model.addAttribute("patient", patient);
             model.addAttribute("appointments", appointmentService.findByPatientId(patient.getId()));
+            
+            List<Doctor> doctors = doctorService.findApproved();
+            model.addAttribute("doctors", doctors);
+            
+            Map<Long, Double> ratings = new java.util.HashMap<>();
+            for (Doctor d : doctors) {
+                Double avg = reviewService.getAverageRating(d.getId());
+                ratings.put(d.getId(), avg != null ? avg : 0.0);
+            }
+            model.addAttribute("ratings", ratings);
         }
         return "patient/appointments";
     }
 
     @PostMapping("/appointments/book")
-    public String bookAppointment(@RequestParam(required = false) String preferredDateNote,
+    public String bookAppointment(@RequestParam(required = false) Long doctorId,
+                                  @RequestParam(required = false) String preferredDateNote,
                                   @RequestParam(required = false) String preferredDate,
                                   @RequestParam(required = false) String notes,
                                   HttpSession session, RedirectAttributes ra) {
@@ -209,6 +278,9 @@ public class PatientController {
         appt.setPatient(patient);
         appt.setPreferredDateNote(preferredDateNote);
         appt.setNotes(notes);
+        if (doctorId != null) {
+            doctorService.findById(doctorId).ifPresent(appt::setDoctor);
+        }
         if (preferredDate != null && !preferredDate.isBlank()) {
             try { appt.setPreferredDate(java.time.LocalDate.parse(preferredDate)); } catch (Exception ignored) {}
         }
@@ -219,9 +291,51 @@ public class PatientController {
                 "Your appointment request has been received. Our reception team will assign a doctor and confirm your schedule shortly.",
                 "INFO");
 
-        ra.addFlashAttribute("success", "Appointment request submitted! Reception will assign a doctor and confirm your schedule.");
+        ra.addFlashAttribute("success", "Appointment request submitted! Reception will finalize the doctor and confirm your schedule.");
         return "redirect:/patient/appointments";
     }
+
+    @PostMapping("/appointments/{id}/update")
+    public String updateAppointment(@PathVariable Long id,
+                                    @RequestParam(required = false) Long doctorId,
+                                    @RequestParam(required = false) String preferredDate,
+                                    @RequestParam(required = false) String preferredDateNote,
+                                    @RequestParam(required = false) String notes,
+                                    HttpSession session, RedirectAttributes ra) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+
+        Appointment appt = appointmentService.findById(id).orElse(null);
+        if (appt == null || !appt.getPatient().getId().equals(patient.getId())) {
+            ra.addFlashAttribute("error", "Appointment not found.");
+            return "redirect:/patient/appointments";
+        }
+
+        if (!"AWAITING_ASSIGNMENT".equals(appt.getStatus())) {
+            ra.addFlashAttribute("error", "Only pending appointments can be updated.");
+            return "redirect:/patient/appointments";
+        }
+
+        if (doctorId != null) {
+            doctorService.findById(doctorId).ifPresent(appt::setDoctor);
+        } else {
+            appt.setDoctor(null);
+        }
+        
+        if (preferredDate != null && !preferredDate.isBlank()) {
+            try { appt.setPreferredDate(java.time.LocalDate.parse(preferredDate)); } catch (Exception ignored) {}
+        }
+        
+        appt.setPreferredDateNote(preferredDateNote);
+        appt.setNotes(notes);
+        
+        appointmentService.save(appt);
+        
+        ra.addFlashAttribute("success", "Appointment request updated successfully.");
+
+        return "redirect:/patient/appointments";
+    }
+
 
     @PostMapping("/appointments/{id}/cancel")
     public String cancelAppointment(@PathVariable Long id, RedirectAttributes ra) {
@@ -339,6 +453,7 @@ public class PatientController {
                                 @RequestParam(required = false) String phone,
                                 @RequestParam(required = false) String address,
                                 @RequestParam(required = false) String bloodGroup,
+                                @RequestParam(required = false) String gender,
                                 @RequestParam(required = false) String emergencyEmail,
                                 HttpSession session, RedirectAttributes ra) {
         User user = (User) session.getAttribute("sessionUser");
@@ -349,6 +464,7 @@ public class PatientController {
         if (patient != null) {
             patient.setPhone(phone); patient.setAddress(address);
             patient.setBloodGroup(bloodGroup); patient.setEmergencyEmail(emergencyEmail);
+            patient.setGender(gender);
             patientService.update(patient);
         }
         session.setAttribute("sessionUser", userService.findById(user.getId()).orElse(user));
@@ -379,3 +495,4 @@ public class PatientController {
         return "redirect:/patient/settings";
     }
 }
+

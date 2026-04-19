@@ -24,6 +24,7 @@ public class DoctorController {
     @Autowired private HealthMetricService healthMetricService;
     @Autowired private MedicalReportService medicalReportService;
     @Autowired private EmailService emailService;
+    @Autowired private MedicineService medicineService;
 
     private Doctor getSessionDoctor(HttpSession session) {
         User user = (User) session.getAttribute("sessionUser");
@@ -71,7 +72,21 @@ public class DoctorController {
         Doctor doctor = getSessionDoctor(session);
         if (doctor == null || !doctor.isApproved()) { ra.addFlashAttribute("error", "Action denied. Account not approved."); return "redirect:/doctor/dashboard"; }
         appointmentService.complete(id);
-        ra.addFlashAttribute("success", "Appointment marked as completed.");
+        
+        appointmentService.findById(id).ifPresent(appt -> {
+            try {
+                String reviewLink = "http://localhost:8080" + session.getServletContext().getContextPath() + "/patient/reviews/new?appointmentId=" + id;
+                String body = "Dear " + appt.getPatient().getUser().getFullName() + ",\n\n" +
+                              "We hope your recent appointment with Dr. " + doctor.getUser().getFullName() + " went well.\n\n" +
+                              "Please take a moment to review your experience by clicking the link below:\n" +
+                              reviewLink + "\n\n" +
+                              "Your feedback helps us improve our healthcare services!\n\n" +
+                              "Stay Healthy,\nSmart Health Monitor Team";
+                emailService.sendEmail(appt.getPatient().getUser().getEmail(), "How was your appointment? Leave a Review!", body);
+            } catch (Exception e) {}
+        });
+
+        ra.addFlashAttribute("success", "Appointment marked as completed and review invitation sent.");
         return "redirect:/doctor/appointments";
     }
 
@@ -107,6 +122,7 @@ public class DoctorController {
             model.addAttribute("doctor", doctor);
             model.addAttribute("prescriptions", prescriptionService.findByDoctorId(doctor.getId()));
             model.addAttribute("patients", patientService.findAll());
+            model.addAttribute("medicines", medicineService.findAll());
         }
         return "doctor/prescriptions";
     }
@@ -301,5 +317,22 @@ public class DoctorController {
     public String addDiagnosis(HttpSession session, Model model) {
         model.addAttribute("patients", patientService.findAll());
         return "doctor/add-diagnosis";
+    }
+
+    /** JSON endpoint for medicine autocomplete in prescription form */
+    @GetMapping("/medicines/search")
+    @ResponseBody
+    public java.util.List<com.smarthealth.model.Medicine> searchMedicines(@RequestParam String q) {
+        return medicineService.search(q);
+    }
+
+    @GetMapping("/prescriptions/{id}")
+    public String prescriptionDetail(@PathVariable Long id, HttpSession session, Model model, RedirectAttributes ra) {
+        Doctor doctor = getSessionDoctor(session);
+        Prescription rx = prescriptionService.findById(id).orElse(null);
+        if (rx == null) { ra.addFlashAttribute("error", "Prescription not found."); return "redirect:/doctor/prescriptions"; }
+        model.addAttribute("prescription", rx);
+        model.addAttribute("doctor", doctor);
+        return "doctor/prescription-detail";
     }
 }

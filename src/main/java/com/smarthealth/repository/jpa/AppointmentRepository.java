@@ -12,7 +12,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByPatientId(Long patientId);
     List<Appointment> findByStatus(String status);
     List<Appointment> findByDoctorIdOrderByScheduledAtDesc(Long doctorId);
-    List<Appointment> findByPatientIdOrderByScheduledAtDesc(Long patientId);
+    List<Appointment> findByPatientIdOrderByCreatedAtDesc(Long patientId);
     List<Appointment> findByStatusOrderByCreatedAtDesc(String status);
     long countByDoctorId(Long doctorId);
     long countByPatientId(Long patientId);
@@ -34,6 +34,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     /** Max token number for a doctor on a given date */
     @Query("SELECT COALESCE(MAX(a.tokenNumber), 0) FROM Appointment a WHERE a.doctor.id = :doctorId AND a.scheduledAt >= :start AND a.scheduledAt < :end")
     Integer maxTokenByDoctorAndDate(@Param("doctorId") Long doctorId,
+                                     @Param("start") LocalDateTime start,
+                                     @Param("end") LocalDateTime end);
+
+    /** Max scheduled date for a doctor on a given date */
+    @Query("SELECT MAX(a.scheduledAt) FROM Appointment a WHERE a.doctor.id = :doctorId AND a.scheduledAt >= :start AND a.scheduledAt < :end AND a.status != 'CANCELLED'")
+    LocalDateTime maxScheduledAtByDoctorAndDate(@Param("doctorId") Long doctorId,
                                      @Param("start") LocalDateTime start,
                                      @Param("end") LocalDateTime end);
 }

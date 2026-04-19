@@ -43,4 +43,30 @@ public class PatientService {
     public long count() {
         return patientRepository.count();
     }
+
+    // ── Filter methods for messaging ──────────────────────────────────
+    public List<Patient> findFiltered(String bloodGroup, String gender, Long departmentId) {
+        boolean hasBg   = bloodGroup != null && !bloodGroup.isBlank();
+        boolean hasGen  = gender != null && !gender.isBlank();
+        boolean hasDept = departmentId != null;
+
+        if (hasBg && hasGen && hasDept) {
+            return patientRepository.findByBloodGroupAndGenderAndDepartmentId(bloodGroup, gender, departmentId);
+        } else if (hasBg && hasGen) {
+            return patientRepository.findByBloodGroupAndGender(bloodGroup, gender);
+        } else if (hasBg && hasDept) {
+            return patientRepository.findByBloodGroupAndDepartmentId(bloodGroup, departmentId);
+        } else if (hasGen && hasDept) {
+            return patientRepository.findByGenderAndDepartmentId(gender, departmentId);
+        } else if (hasBg) {
+            return patientRepository.findByBloodGroup(bloodGroup);
+        } else if (hasGen) {
+            return patientRepository.findByGender(gender);
+        } else if (hasDept) {
+            return patientRepository.findByDepartmentId(departmentId);
+        } else {
+            return patientRepository.findAll();
+        }
+    }
 }
+

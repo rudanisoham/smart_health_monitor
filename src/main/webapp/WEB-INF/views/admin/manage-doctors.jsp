@@ -54,6 +54,7 @@
                             <th>Name</th>
                             <th>Contact</th>
                             <th>Specialty</th>
+                            <th>Rating</th>
                             <th>Department</th>
                             <th>Status/Account</th>
                             <th class="text-right">Actions</th>
@@ -78,6 +79,11 @@
                                             <div class="muted text-xs">${doc.phone != null ? doc.phone : '—'}</div>
                                         </td>
                                         <td>${doc.specialty}</td>
+                                        <td>
+                                            <div style="color:#f59e0b; font-weight:700;">
+                                                ★ ${not empty ratings[doc.id] and ratings[doc.id] > 0 ? String.format("%.1f", ratings[doc.id]) : 'N/A'}
+                                            </div>
+                                        </td>
                                         <td><span class="chip-neutral">${doc.department != null ? doc.department.name : 'Unassigned'}</span></td>
                                         <td>
                                             <c:choose>

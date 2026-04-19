@@ -50,6 +50,14 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
         }
 
+        // Medical Staff Access Control
+        if (path.startsWith("/medical")) {
+            if (sessionUser == null || sessionUser.getRole() != com.smarthealth.model.Role.MEDICAL_STAFF) {
+                response.sendRedirect(request.getContextPath() + "/auth/medical/login?error=unauthorized");
+                return false;
+            }
+        }
+
         return true;
     }
 }

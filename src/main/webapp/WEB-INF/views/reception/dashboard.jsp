@@ -32,6 +32,11 @@
                     <div class="muted mt-1">Patients in queue</div>
                 </div>
                 <div class="card">
+                    <div class="card-title">Today's Appointments</div>
+                    <div class="card-value" style="color:#3b82f6;">${todayAppointments != null ? todayAppointments : 0}</div>
+                    <div class="muted mt-1">Scheduled for today</div>
+                </div>
+                <div class="card">
                     <div class="card-title">Total Appointments</div>
                     <div class="card-value">${totalAppointments != null ? totalAppointments : 0}</div>
                     <div class="muted mt-1">All time</div>
@@ -40,11 +45,6 @@
                     <div class="card-title">Total Patients</div>
                     <div class="card-value">${totalPatients != null ? totalPatients : 0}</div>
                     <div class="muted mt-1">Registered</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">Departments</div>
-                    <div class="card-value">${not empty departments ? departments.size() : 0}</div>
-                    <div class="muted mt-1">Active units</div>
                 </div>
             </div>
 

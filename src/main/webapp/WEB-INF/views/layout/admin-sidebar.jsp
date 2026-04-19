@@ -40,6 +40,31 @@
             </span>
             <span class="sidebar-text">Patients</span>
         </a>
+
+        <div class="sidebar-section-label sidebar-text">Staff Management</div>
+        <a href="<%= request.getContextPath() %>/admin/receptionists"
+           class="sidebar-link <%= "receptionists".equals(request.getAttribute("activePage")) ? "active" : "" %>">
+            <span class="icon">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </span>
+            <span class="sidebar-text">Receptionists</span>
+        </a>
+        <a href="<%= request.getContextPath() %>/admin/medical-staff"
+           class="sidebar-link <%= "medical-staff".equals(request.getAttribute("activePage")) ? "active" : "" %>">
+            <span class="icon">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+            </span>
+            <span class="sidebar-text">Medical Staff</span>
+        </a>
+
+        <div class="sidebar-section-label sidebar-text">Operations</div>
         <a href="<%= request.getContextPath() %>/admin/departments"
            class="sidebar-link <%= "departments".equals(request.getAttribute("activePage")) ? "active" : "" %>">
             <span class="icon">
@@ -78,6 +103,38 @@
                 </svg>
             </span>
             <span class="sidebar-text">System Logs</span>
+        </a>
+        <a href="<%= request.getContextPath() %>/admin/reviews"
+           class="sidebar-link <%= "reviews".equals(request.getAttribute("activePage")) ? "active" : "" %>">
+            <span class="icon">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                </svg>
+            </span>
+            <span class="sidebar-text">Doctor Reviews</span>
+        </a>
+        <a href="<%= request.getContextPath() %>/admin/feedback"
+           class="sidebar-link <%= "feedback".equals(request.getAttribute("activePage")) ? "active" : "" %>">
+            <span class="icon" style="position: relative;">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <c:if test="${pendingCount > 0}">
+                    <span style="position: absolute; top: -5px; right: -5px; background: var(--danger); width: 8px; height: 8px; border-radius: 50%; border: 2px solid white;"></span>
+                </c:if>
+            </span>
+            <span class="sidebar-text">Feedback & Inquiries</span>
+        </a>
+        <a href="<%= request.getContextPath() %>/admin/messaging"
+           class="sidebar-link <%= "messaging".equals(request.getAttribute("activePage")) ? "active" : "" %>">
+            <span class="icon">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <line x1="9" y1="10" x2="15" y2="10"></line>
+                    <line x1="12" y1="7" x2="12" y2="13"></line>
+                </svg>
+            </span>
+            <span class="sidebar-text">Broadcast Center</span>
         </a>
         <a href="<%= request.getContextPath() %>/admin/settings"
            class="sidebar-link <%= "settings".equals(request.getAttribute("activePage")) ? "active" : "" %>">

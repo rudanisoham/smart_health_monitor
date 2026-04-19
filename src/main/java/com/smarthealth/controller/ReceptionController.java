@@ -32,6 +32,12 @@ public class ReceptionController {
         model.addAttribute("pendingQueue", appointmentService.findAwaitingAssignment());
         model.addAttribute("pendingCount", appointmentService.countAwaitingAssignment());
         model.addAttribute("totalAppointments", appointmentService.count());
+        
+        long todayCount = doctorService.findAll().stream()
+                .mapToLong(d -> appointmentService.countTodayByDoctorId(d.getId()))
+                .sum();
+        model.addAttribute("todayAppointments", todayCount);
+        
         model.addAttribute("departments", departmentService.findAll());
         model.addAttribute("totalPatients", patientService.count());
         return "reception/dashboard";
@@ -120,12 +126,15 @@ public class ReceptionController {
 
         // Email patient
         try {
-            emailService.sendAppointmentAssignedByReception(
-                    appt.getPatient().getUser().getEmail(),
-                    appt.getPatient().getUser().getFullName(),
-                    doctor.getUser().getFullName(),
-                    doctor.getSpecialty() != null ? doctor.getSpecialty() : "General",
-                    dt.toString().replace("T", " ").substring(0, 16));
+            String subject = "Appointment Assigned & Confirmed";
+            String body = "Dear " + saved.getPatient().getUser().getFullName() + ",\n\n" +
+                          "Your appointment request has been processed.\n" +
+                          "Doctor: Dr. " + saved.getDoctor().getUser().getFullName() + "\n" +
+                          "Scheduled Date & Time: " + saved.getScheduledAt().toString().replace("T", " ") + "\n" +
+                          "Token Number: #" + saved.getTokenNumber() + "\n\n" +
+                          "Please login to the portal for more details.\n\n" +
+                          "Regards,\nSmart Health Monitor Team";
+            emailService.sendEmail(saved.getPatient().getUser().getEmail(), subject, body);
         } catch (Exception e) {
             logService.warn("Failed to send assignment email to: " + appt.getPatient().getUser().getEmail(), "Reception");
         }
@@ -150,6 +159,49 @@ public class ReceptionController {
         ra.addFlashAttribute("success", "Appointment cancelled.");
         return "redirect:/reception/appointments";
     }
+
+    @PostMapping("/appointments/{id}/notify-unavailable")
+    public String notifyUnavailable(@PathVariable Long id,
+                                    @RequestParam String availableFrom,
+                                    @RequestParam(required = false) String message,
+                                    HttpSession session,
+                                    RedirectAttributes ra) {
+        Appointment appt = appointmentService.findById(id).orElse(null);
+        if (appt == null) {
+            ra.addFlashAttribute("error", "Appointment not found.");
+            return "redirect:/reception/appointments";
+        }
+
+        String doctorName = appt.getDoctor() != null ? "Dr. " + appt.getDoctor().getUser().getFullName() : "The selected doctor";
+        
+        // 1. Send Notification
+        String notifMsg = doctorName + " is currently unavailable on your requested date. " +
+                         "They will be available again from: " + availableFrom + ". " +
+                         (message != null ? message : "Please update your request with a new date or select another doctor.");
+        
+        notificationService.send(appt.getPatient().getUser().getId(), "PATIENT",
+                "Doctor Unavailable - Action Required", notifMsg, "WARNING");
+
+        // 2. Send Email
+        try {
+            String subject = "Update Required: Your Appointment with " + doctorName;
+            String body = "Dear " + appt.getPatient().getUser().getFullName() + ",\n\n" +
+                          "Regarding your appointment request with " + doctorName + ",\n\n" +
+                          "Our reception has noted that the doctor is currently unavailable on your requested date.\n\n" +
+                          "Next Available From: " + availableFrom + "\n" +
+                          "Notes: " + (message != null && !message.isBlank() ? message : "N/A") + "\n\n" +
+                          "Please login to the Smart Health Monitor portal to update your appointment date or choose a different doctor.\n\n" +
+                          "You can modify your request in the 'Your Appointments' section.\n\n" +
+                          "Regards,\nReception Team\nSmart Health Monitor";
+            emailService.sendEmail(appt.getPatient().getUser().getEmail(), subject, body);
+        } catch (Exception e) {}
+
+        logService.info("Patient #" + appt.getPatient().getId() + " notified of doctor unavailability for appt #" + id, "Reception");
+        
+        ra.addFlashAttribute("success", "Patient has been notified via email and portal notification.");
+        return "redirect:/reception/appointments";
+    }
+
 
     // ── Bed Management ────────────────────────────────────────────────────
     @GetMapping("/beds")
@@ -264,5 +316,23 @@ public class ReceptionController {
             }
         }
         return "redirect:/reception/settings";
+    }
+
+    // ── API ───────────────────────────────────────────────────────────────
+    @GetMapping("/api/maxToken")
+    @ResponseBody
+    public java.util.Map<String, Object> getMaxTokenByDate(@RequestParam Long doctorId, @RequestParam String date) {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        try {
+            java.time.LocalDate ld = java.time.LocalDate.parse(date);
+            Integer max = appointmentService.findMaxTokenForDoctor(doctorId, ld);
+            java.time.LocalDateTime latest = appointmentService.findMaxScheduledTimeForDoctor(doctorId, ld);
+            map.put("maxToken", max != null ? max : 0);
+            map.put("latestTime", latest != null ? latest.toString() : null);
+        } catch (Exception e) {
+            map.put("maxToken", 0);
+            map.put("latestTime", null);
+        }
+        return map;
     }
 }

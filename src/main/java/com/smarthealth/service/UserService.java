@@ -73,4 +73,13 @@ public class UserService {
     public boolean checkPassword(String rawPassword, String encodedPassword) {
         return encoder.matches(rawPassword, encodedPassword);
     }
+
+    public List<User> findByRole(com.smarthealth.model.Role role) {
+        return userRepository.findByRole(role);
+    }
+
+    public void delete(Long id) {
+        userRepository.deleteById(id);
+    }
 }
+

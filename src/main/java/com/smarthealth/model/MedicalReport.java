@@ -30,6 +30,9 @@ public class MedicalReport {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "uploaded_by")
+    private String uploadedBy; // name of staff/doctor who uploaded
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -56,6 +59,9 @@ public class MedicalReport {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getUploadedBy() { return uploadedBy; }
+    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "report_type")

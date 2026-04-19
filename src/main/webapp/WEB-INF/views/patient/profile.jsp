@@ -47,6 +47,15 @@
                                    value="${patient != null ? patient.phone : ''}" placeholder="+91 98765 43210" pattern="^\+?[0-9]{10,15}$">
                         </div>
                         <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <select id="gender" name="gender" class="form-select">
+                                <option value="">-- Select --</option>
+                                <option value="Male" ${patient != null and patient.gender == 'Male' ? 'selected' : ''}>Male</option>
+                                <option value="Female" ${patient != null and patient.gender == 'Female' ? 'selected' : ''}>Female</option>
+                                <option value="Other" ${patient != null and patient.gender == 'Other' ? 'selected' : ''}>Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="bloodGroup">Blood Group</label>
                             <select id="bloodGroup" name="bloodGroup" class="form-select">
                                 <option value="">-- Select --</option>
@@ -89,6 +98,12 @@
                             <div class="stat-info">
                                 <span class="stat-label">Email</span>
                                 <span class="stat-value" style="font-size:1rem;">${patient != null ? patient.user.email : '—'}</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-info">
+                                <span class="stat-label">Gender</span>
+                                <span class="stat-value" style="font-size:1rem;">${patient != null and patient.gender != null ? patient.gender : 'Not set'}</span>
                             </div>
                         </div>
                         <div class="stat-item">

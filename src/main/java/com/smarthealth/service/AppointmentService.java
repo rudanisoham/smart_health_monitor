@@ -29,6 +29,11 @@ public class AppointmentService {
         return appointmentRepository.save(appointment);
     }
 
+    public Appointment save(Appointment appointment) {
+        return appointmentRepository.save(appointment);
+    }
+
+
     /**
      * Reception assigns doctor + scheduled time.
      * Auto-generates token number and estimated arrival time.
@@ -49,9 +54,8 @@ public class AppointmentService {
         int token = (maxToken != null ? maxToken : 0) + 1;
         appt.setTokenNumber(token);
 
-        // Estimated time = scheduledAt + (token - 1) * SLOT_MINUTES
-        // (first patient at exact scheduledAt, each subsequent one SLOT_MINUTES later)
-        LocalDateTime estimated = scheduledAt.plusMinutes((long)(token - 1) * SLOT_MINUTES);
+        // Estimated time is now precisely what the receptionist explicitly chooses
+        LocalDateTime estimated = scheduledAt;
         appt.setEstimatedTime(estimated);
 
         return appointmentRepository.save(appt);
@@ -87,8 +91,9 @@ public class AppointmentService {
     }
 
     public List<Appointment> findByPatientId(Long patientId) {
-        return appointmentRepository.findByPatientIdOrderByScheduledAtDesc(patientId);
+        return appointmentRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
     }
+
 
     public List<Appointment> findAll() {
         return appointmentRepository.findAll();
@@ -129,5 +134,13 @@ public class AppointmentService {
 
     public boolean isTimeSlotOccupied(Long doctorId, LocalDateTime scheduledAt) {
         return appointmentRepository.existsByDoctorIdAndScheduledAtAndStatusNot(doctorId, scheduledAt, "CANCELLED");
+    }
+
+    public Integer findMaxTokenForDoctor(Long doctorId, LocalDate date) {
+        return appointmentRepository.maxTokenByDoctorAndDate(doctorId, date.atStartOfDay(), date.atTime(LocalTime.MAX));
+    }
+
+    public LocalDateTime findMaxScheduledTimeForDoctor(Long doctorId, LocalDate date) {
+        return appointmentRepository.maxScheduledAtByDoctorAndDate(doctorId, date.atStartOfDay(), date.atTime(LocalTime.MAX));
     }
 }

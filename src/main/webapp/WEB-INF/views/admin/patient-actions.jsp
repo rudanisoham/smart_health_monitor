@@ -67,7 +67,7 @@
                             <div class="card-header">
                                 <div>
                                     <div class="section-title">Health Demographics</div>
-                                    <div class="section-subtitle">Basic medical metadata</div>
+                                    <div class="section-subtitle">Medical metadata & identity</div>
                                 </div>
                             </div>
                             <div class="mt-3">
@@ -90,20 +90,206 @@
                                 </div>
                                 <div class="stat-item">
                                     <div class="stat-info">
-                                        <span class="stat-label">Registered Phone</span>
-                                        <span class="stat-value" style="font-size:0.95rem;">${patient.phone != null ? patient.phone : 'Not provided'}</span>
+                                        <span class="stat-label">Date of Birth</span>
+                                        <span class="stat-value" style="font-size:0.95rem;">${patient.dateOfBirth != null ? patient.dateOfBirth : '—'}</span>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-info">
+                                        <span class="stat-label">Known Allergies</span>
+                                        <span class="stat-value" style="font-size:0.95rem; color:#ef4444;">${patient.allergies != null ? patient.allergies : 'No known allergies'}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-4 p-3" style="background:rgba(59,130,246,0.05); border:1px solid #3b82f6; border-radius:8px; display:flex; gap:1rem; align-items:flex-start;">
-                        <span style="font-size:1.5rem; margin-top:-2px;">🔒</span>
-                        <div style="font-size:0.9rem; color:var(--text-muted); line-height: 1.5;">
-                            <strong>HIPAA Privacy Lock:</strong> As a system administrator, you cannot view the clinical diagnostic records, issued prescriptions, or detailed vital metrics for this patient. Only assigned registered doctors can view specific Personal Health Information (PHI).
+                    <div class="grid grid-2 mt-4">
+                        <%-- Contact & Privacy Card --%>
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="section-title">Contact & Residency</div>
+                                    <div class="section-subtitle">Personal communication details</div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="stat-item">
+                                    <div class="stat-info">
+                                        <span class="stat-label">Registered Phone</span>
+                                        <span class="stat-value" style="font-size:0.95rem;">${patient.phone != null ? patient.phone : 'Not provided'}</span>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-info">
+                                        <span class="stat-label">Primary Address</span>
+                                        <span class="stat-value" style="font-size:0.95rem; line-height:1.4;">${patient.address != null ? patient.address : 'No address on file'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <%-- Emergency Card --%>
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="section-title">Emergency Protocols</div>
+                                    <div class="section-subtitle">Contacts for critical situations</div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="stat-item">
+                                    <div class="stat-info">
+                                        <span class="stat-label">Emergency Email</span>
+                                        <span class="stat-value" style="font-size:0.95rem; color:#3b82f6;">${patient.emergencyEmail != null ? patient.emergencyEmail : 'Not set'}</span>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-info">
+                                        <span class="stat-label">Primary Facility</span>
+                                        <span class="stat-value" style="font-size:0.95rem;">${patient.department != null ? patient.department.name : 'Unassigned'}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+
+                    <div class="grid grid-2 mt-4">
+                        <%-- Vitals Overview (Latest) --%>
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <div class="section-title">Latest Recorded Vitals</div>
+                                    <div class="section-subtitle">Real-time health telemetry</div>
+                                </div>
+                                <c:choose>
+                                    <c:when test="${not empty metrics[0]}">
+                                        <c:set var="m" value="${metrics[0]}"/>
+                                        <c:choose>
+                                            <c:when test="${m.riskLevel == 'HIGH'}"><span class="chip-danger">⚠ HIGH RISK</span></c:when>
+                                            <c:when test="${m.riskLevel == 'MEDIUM'}"><span class="chip-warning">⚠ MEDIUM RISK</span></c:when>
+                                            <c:otherwise><span class="chip">✓ LOW RISK</span></c:otherwise>
+                                        </c:choose>
+                                    </c:when>
+                                </c:choose>
+                            </div>
+                            <div class="mt-3">
+                                <c:choose>
+                                    <c:when test="${not empty metrics}">
+                                        <c:set var="lastM" value="${metrics[0]}"/>
+                                        <div style="margin-bottom:0.75rem;font-size:0.8rem;color:var(--text-muted);">
+                                            Recorded on: ${lastM.timestamp.toString().replace('T',' ').substring(0,16)}
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-info">
+                                                <span class="stat-label">❤ Heart Rate</span>
+                                                <span class="stat-value" style="font-size:1rem;">${lastM.heartRate != null ? lastM.heartRate.toString().concat(' bpm') : '—'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-info">
+                                                <span class="stat-label">🩺 Blood Pressure</span>
+                                                <span class="stat-value" style="font-size:1rem;">${lastM.bloodPressureSys != null ? lastM.bloodPressureSys.toString().concat('/').concat(lastM.bloodPressureDia.toString()).concat(' mmHg') : '—'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-info">
+                                                <span class="stat-label">💧 SpO2 (Oxygen)</span>
+                                                <span class="stat-value" style="font-size:1rem;">${lastM.spo2 != null ? lastM.spo2.toString().concat('%') : '—'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="stat-item">
+                                            <div class="stat-info">
+                                                <span class="stat-label">🌡 Temperature</span>
+                                                <span class="stat-value" style="font-size:1rem;">${lastM.temperature != null ? lastM.temperature.toString().concat('°C') : '—'}</span>
+                                            </div>
+                                        </div>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div class="muted text-center" style="padding:2rem;">No health vitals recorded by this patient.</div>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </div>
+
+                        <%-- Clinical History Card --%>
+                        <div class="card">
+                            <div class="card-header pb-3">
+                                <div>
+                                    <div class="section-title">Clinical Record Logs</div>
+                                    <div class="section-subtitle">Prescriptions and official medical history</div>
+                                </div>
+                            </div>
+                            <div class="table-container mt-2" style="max-height: 400px; overflow-y: auto;">
+                                <table>
+                                    <thead>
+                                    <tr>
+                                        <th>Date Issued</th>
+                                        <th>Diagnosis</th>
+                                        <th>Medicines</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <c:choose>
+                                        <c:when test="${not empty prescriptions}">
+                                            <c:forEach var="p" items="${prescriptions}">
+                                                <tr>
+                                                    <td style="font-size:0.75rem;">${p.createdAt.toString().substring(0, 10)}</td>
+                                                    <td style="font-weight:600;">${p.diagnosis}</td>
+                                                    <td><div style="font-size:0.75rem; color:var(--text-muted);">${p.medicines}</div></td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <tr><td colspan="3" class="muted text-center" style="padding: 2rem;">No clinical records found.</td></tr>
+                                        </c:otherwise>
+                                    </c:choose>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <%-- Patient Uploaded Reports Section --%>
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <div>
+                                <div class="section-title">Patient Uploaded Reports & Documentation</div>
+                                <div class="section-subtitle">Files provided for system review</div>
+                            </div>
+                        </div>
+                        <div class="table-container mt-2">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Report Title</th>
+                                    <th>Description</th>
+                                    <th>Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <c:choose>
+                                    <c:when test="${not empty reports}">
+                                        <c:forEach var="r" items="${reports}">
+                                            <tr>
+                                                <td>${r.createdAt.toString().substring(0, 10)}</td>
+                                                <td style="font-weight:600;">${r.title}</td>
+                                                <td class="muted">${r.description}</td>
+                                                <td><a href="${pageContext.request.contextPath}/admin/reports/${r.id}" class="btn btn-outline btn-sm">Audit Report</a></td>
+                                            </tr>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <tr><td colspan="4" class="muted text-center" style="padding: 2rem;">No documentation uploaded.</td></tr>
+                                    </c:otherwise>
+                                </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
 
                     <%-- Danger Zone --%>
                     <div class="card mt-4" style="border-width:0; box-shadow: 0 0 0 1px rgba(239,68,68,0.2); background: rgba(239,68,68,0.02);">

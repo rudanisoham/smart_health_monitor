@@ -35,6 +35,9 @@ public class AuthController {
     @GetMapping("/reception/login")
     public String receptionLogin() { return "auth/reception-login"; }
 
+    @GetMapping("/medical/login")
+    public String medicalLogin() { return "auth/medical-login"; }
+
     @GetMapping("/patient/register")
     public String patientRegister(Model model) { return "auth/patient-register"; }
 
@@ -65,6 +68,20 @@ public class AuthController {
             ra.addFlashAttribute("error", "You don't have access as " + roleStr + ".");
             return "redirect:/auth/" + roleStr.toLowerCase() + "/login";
         }
+        if (user.getRole() == Role.DOCTOR) {
+            Doctor doctor = doctorService.findByUserId(user.getId());
+            if (doctor != null) {
+                if (!doctor.isApproved()) {
+                    ra.addFlashAttribute("error", "Your account is awaiting registration approval. Please wait for an administrator to activate your profile.");
+                    return "redirect:/auth/doctor/login";
+                }
+                if ("INACTIVE".equalsIgnoreCase(doctor.getStatus())) {
+                    ra.addFlashAttribute("error", "Your account is currently inactive. Please contact the administrator for more information.");
+                    return "redirect:/auth/doctor/login";
+                }
+            }
+        }
+
         session.setAttribute("sessionUser", user);
         if (latitude != null && longitude != null) {
             session.setAttribute("loginLatitude", latitude);
@@ -76,9 +93,11 @@ public class AuthController {
             case DOCTOR:       return "redirect:/doctor/dashboard";
             case PATIENT:      return "redirect:/patient/dashboard";
             case RECEPTIONIST: return "redirect:/reception/dashboard";
+            case MEDICAL_STAFF: return "redirect:/medical/dashboard";
             default:           return "redirect:/";
         }
     }
+
 
     // ── POST patient register ────────────────────────────────────────────
     @PostMapping("/patient/register")

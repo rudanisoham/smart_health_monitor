@@ -24,6 +24,7 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
     @Autowired private SiteContentRepository siteContentRepository;
     @Autowired private SiteFeatureRepository siteFeatureRepository;
     @Autowired private javax.sql.DataSource dataSource;
+    @Autowired private com.smarthealth.repository.jpa.MedicineRepository medicineRepository;
 
     private boolean seeded = false;
 
@@ -78,6 +79,25 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
             System.out.println("INFO: Could not add token columns (may already exist): " + e.getMessage());
         }
 
+        // Add uploaded_by to medical_reports if missing
+        try (java.sql.Connection conn = dataSource.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE medical_reports ADD COLUMN IF NOT EXISTS uploaded_by VARCHAR(255) NULL");
+            System.out.println("INFO: medical_reports.uploaded_by column ensured.");
+        } catch (Exception e) {
+            System.out.println("INFO: Could not add uploaded_by column: " + e.getMessage());
+        }
+
+        // Add units_per_pack and price_per_pack to medicines if missing
+        try (java.sql.Connection conn = dataSource.getConnection();
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE medicines ADD COLUMN IF NOT EXISTS units_per_pack INT DEFAULT 1");
+            stmt.execute("ALTER TABLE medicines ADD COLUMN IF NOT EXISTS price_per_pack DOUBLE NULL");
+            System.out.println("INFO: medicines pack columns ensured.");
+        } catch (Exception e) {
+            System.out.println("INFO: Could not add medicine pack columns: " + e.getMessage());
+        }
+
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
         // Seed admin user
@@ -102,6 +122,18 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
             reception.setPhone("8888888888");
             reception.setActive(true);
             userRepository.save(reception);
+        }
+
+        // Seed medical staff user
+        if (!userRepository.existsByEmail("medical@health.com")) {
+            User staff = new User();
+            staff.setFullName("Medical Staff");
+            staff.setEmail("medical@health.com");
+            staff.setPassword(encoder.encode("medical123"));
+            staff.setRole(Role.MEDICAL_STAFF);
+            staff.setPhone("7777777777");
+            staff.setActive(true);
+            userRepository.save(staff);
         }
 
         // Seed reception user
@@ -137,6 +169,39 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
                 dept.setEmergencyPhone(d[5]);
                 departmentRepository.save(dept);
             }
+        }
+
+        // Seed Medicines
+        try {
+            if (medicineRepository.count() == 0) {
+                Object[][] meds = {
+                    {"Paracetamol", "Analgesic", "Tablet", "500mg", 500, 10.0},
+                    {"Amoxicillin", "Antibiotic", "Capsule", "250mg", 300, 25.0},
+                    {"Ibuprofen", "Anti-inflammatory", "Tablet", "400mg", 400, 15.0},
+                    {"Cetirizine", "Antihistamine", "Tablet", "10mg", 200, 8.0},
+                    {"Omeprazole", "Antacid", "Capsule", "20mg", 250, 18.0},
+                    {"Metformin", "Antidiabetic", "Tablet", "500mg", 350, 12.0},
+                    {"Atorvastatin", "Statin", "Tablet", "10mg", 200, 30.0},
+                    {"Azithromycin", "Antibiotic", "Tablet", "500mg", 150, 45.0},
+                    {"Salbutamol", "Bronchodilator", "Syrup", "2mg/5ml", 100, 35.0},
+                    {"Insulin Regular", "Antidiabetic", "Injection", "100IU/ml", 80, 120.0}
+                };
+                for (Object[] med : meds) {
+                    com.smarthealth.model.Medicine m = new com.smarthealth.model.Medicine();
+                    m.setName((String) med[0]);
+                    m.setCategory((String) med[1]);
+                    m.setDosageForm((String) med[2]);
+                    m.setStrength((String) med[3]);
+                    m.setStockQuantity((Integer) med[4]);
+                    m.setPrice((Double) med[5]);
+                    m.setExpiryDate(java.time.LocalDate.now().plusYears(2));
+                    m.setCreatedBy("System");
+                    medicineRepository.save(m);
+                }
+                System.out.println("INFO: Sample medicines seeded.");
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to seed medicines: " + e.getMessage());
         }
 
         // Seed Site Content

@@ -20,7 +20,7 @@ public class Doctor {
     @Column(nullable = false, unique = true)
     private String licenseNumber;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "department_id")
     private Department department;
 

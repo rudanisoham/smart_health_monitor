@@ -41,21 +41,60 @@ body {
   margin: 0; font-family: var(--font-family);
   background-color: var(--bg-main); color: var(--text-main);
   -webkit-font-smoothing: antialiased; letter-spacing: -0.01em;
+  height: 100vh; overflow: hidden;
 }
 a { color: inherit; text-decoration: none; }
 
-.admin-app { display: flex; min-height: 100vh; background: var(--bg-main); }
+.admin-app { 
+  display: flex; 
+  height: 100vh; 
+  width: 100vw; 
+  overflow: hidden; 
+  background: var(--bg-main); 
+}
 
-/* Premium Light Sidebar */
+/* Precision Sidebar Scroll System */
 .admin-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0; /* Pin to bottom */
   width: 280px; 
   background: var(--bg-card);
   border-right: 1px solid var(--border);
-  padding: 2.25rem 1.5rem; display: flex; flex-direction: column; gap: 1.75rem;
-  position: sticky; top: 0; height: 100vh; z-index: 40;
-  transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
-  overflow: hidden;
+  padding: 2.25rem 1.5rem;
+  display: block; /* Use block for natural overflow */
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  z-index: 1000;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  scrollbar-width: auto; /* Standard scrollbar */
 }
+
+/* Replicate flex gap with margins on block children */
+.admin-sidebar > div, 
+.admin-sidebar > nav, 
+.admin-sidebar > section {
+  margin-bottom: 1.75rem;
+}
+
+.admin-sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+.admin-sidebar::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.admin-sidebar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  border: 3px solid #f8fafc;
+}
+.admin-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+
+
 
 /* Sidebar Collapsed State - Icon Only View */
 .admin-app.sidebar-collapsed .admin-sidebar {
@@ -144,14 +183,30 @@ a { color: inherit; text-decoration: none; }
 .sidebar-footer strong { color: var(--text-main); }
 
 /* Main Layout & Frosted Header */
-.admin-main { flex: 1; display: flex; flex-direction: column; min-width: 0; transition: width 0.3s ease; }
+.admin-main { 
+  flex: 1; 
+  margin-left: 280px; /* Match sidebar width */
+  display: flex; 
+  flex-direction: column; 
+  min-width: 0; 
+  min-height: 100vh;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--bg-main);
+}
+
+.admin-app.sidebar-collapsed .admin-main {
+  margin-left: 88px;
+}
+
 .admin-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.25rem 2.5rem;
-  background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 30;
+  position: sticky; top: 0; z-index: 90;
 }
+
+
 
 /* Sidebar Toggle Header Button */
 .sidebar-toggle {
@@ -422,6 +477,18 @@ PREMIUM FULL-SCREEN SPLIT AUTH LAYOUT
 @media (max-width: 1024px) {
   .login-card { grid-template-columns: 1fr; }
   .login-extra { display: none; }
-  .admin-sidebar { position: fixed; transform: translateX(-100%); transition: 0.3s; }
+  .admin-sidebar { 
+    position: fixed; 
+    transform: translateX(-100%); 
+    transition: 0.3s; 
+    height: 100%; 
+    max-height: 100%; 
+    overflow-y: auto;
+    z-index: 1000;
+  }
+  .admin-sidebar.active { transform: translateX(0); }
+  .admin-main { margin-left: 0 !important; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
+
+

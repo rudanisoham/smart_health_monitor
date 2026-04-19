@@ -24,6 +24,11 @@ public class DoctorService {
         return doctorRepository.findById(id);
     }
 
+    public Doctor findByUserId(Long userId) {
+        return doctorRepository.findByUserId(userId);
+    }
+
+
     public List<Doctor> findAll() {
         return doctorRepository.findAll();
     }
@@ -68,4 +73,25 @@ public class DoctorService {
     public long countActive() {
         return doctorRepository.findByStatus("ACTIVE").size();
     }
+
+    // ── Filter methods for messaging ──────────────────────────────────
+    public List<String> findDistinctSpecialties() {
+        return doctorRepository.findDistinctSpecialties();
+    }
+
+    public List<Doctor> findFiltered(String specialty, Long departmentId) {
+        boolean hasSpec = specialty != null && !specialty.isBlank();
+        boolean hasDept = departmentId != null;
+
+        if (hasSpec && hasDept) {
+            return doctorRepository.findBySpecialtyAndDepartmentId(specialty, departmentId);
+        } else if (hasSpec) {
+            return doctorRepository.findBySpecialty(specialty);
+        } else if (hasDept) {
+            return doctorRepository.findByDepartmentId(departmentId);
+        } else {
+            return doctorRepository.findAll();
+        }
+    }
 }
+

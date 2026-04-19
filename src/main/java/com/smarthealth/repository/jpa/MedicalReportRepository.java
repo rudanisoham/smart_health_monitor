@@ -10,4 +10,6 @@ import java.util.List;
 public interface MedicalReportRepository extends JpaRepository<MedicalReport, Long> {
     List<MedicalReport> findByPatientId(Long patientId);
     List<MedicalReport> findByPatientIdOrderByCreatedAtDesc(Long patientId);
+    List<MedicalReport> findByStatusOrderByCreatedAtDesc(MedicalReport.ReportStatus status);
+    List<MedicalReport> findAllByOrderByCreatedAtDesc();
 }
