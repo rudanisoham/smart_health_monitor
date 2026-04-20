@@ -87,6 +87,25 @@
                 </div>
             </div>
 
+            <!-- ── AI Check-in Banner ────────────────────────── -->
+            <c:if test="${not empty aiInsight}">
+                <div class="card mb-4" style="background: #ffffff; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border-radius: 20px;">
+                    <div style="display: flex; align-items: center; gap: 1.25rem;">
+                        <div style="width: 54px; height: 54px; border-radius: 14px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; flex-shrink: 0;">✨</div>
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
+                                <span class="badge-soft" style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-size: 0.65rem;">AI HEALTH ASSISTANT</span>
+                                <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 500;">Just now</span>
+                            </div>
+                            <p style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin: 0; line-height: 1.4;">
+                                "${aiInsight}"
+                            </p>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/ai" class="btn btn-outline btn-sm" style="background: #f8fafc; border-color: #e2e8f0; color: #1e293b; font-weight: 700;">Details</a>
+                    </div>
+                </div>
+            </c:if>
+
             <div class="grid grid-2 mt-4">
                 <!-- Health Stats -->
                 <div class="card">

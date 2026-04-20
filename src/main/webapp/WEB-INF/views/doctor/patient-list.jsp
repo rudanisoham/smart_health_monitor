@@ -2,8 +2,8 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%
     request.setAttribute("activePage", "patients");
-    request.setAttribute("pageTitle", "Patient List");
-    request.setAttribute("pageSubtitle", "All patients who have booked appointments with you");
+    request.setAttribute("pageTitle", "My Patients");
+    request.setAttribute("pageSubtitle", "Unique patients who have booked appointments with you");
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,58 +24,56 @@
                 <div class="card-header">
                     <div>
                         <div class="section-title">My Patients</div>
-                        <div class="section-subtitle">Patients who have booked appointments with you</div>
+                        <div class="section-subtitle">${not empty uniquePatients ? uniquePatients.size() : 0} unique patient(s)</div>
                     </div>
-                    <span class="chip-neutral">
-                        <%-- Count unique patients from appointments --%>
-                        ${not empty appointments ? appointments.size() : 0} records
-                    </span>
+                    <div class="search-bar" style="max-width:300px;">
+                        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        <input type="text" placeholder="Search patients..." onkeyup="filterTable(this,'patTable')">
+                    </div>
                 </div>
-                <div class="table-container">
-                    <table>
+                <div class="table-container mt-2">
+                    <table id="patTable">
                         <thead>
                         <tr>
-                            <th>Patient Name</th>
+                            <th>Patient</th>
                             <th>Email</th>
                             <th>Blood Group</th>
                             <th>Phone</th>
-                            <th>Appointment Date</th>
-                            <th>Status</th>
+                            <th>Gender</th>
                             <th class="text-right">Action</th>
                         </tr>
                         </thead>
                         <tbody>
                         <c:choose>
-                            <c:when test="${not empty appointments}">
-                                <c:forEach var="appt" items="${appointments}">
+                            <c:when test="${not empty uniquePatients}">
+                                <c:forEach var="appt" items="${uniquePatients}">
                                     <tr>
-                                        <td><strong>${appt.patient.user.fullName}</strong></td>
-                                        <td class="muted">${appt.patient.user.email}</td>
+                                        <td>
+                                            <div style="display:flex;align-items:center;gap:0.75rem;">
+                                                <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);font-size:0.9rem;flex-shrink:0;">
+                                                    ${appt.patient.user.fullName.substring(0,1)}
+                                                </div>
+                                                <strong>${appt.patient.user.fullName}</strong>
+                                            </div>
+                                        </td>
+                                        <td class="muted" style="font-size:0.875rem;">${appt.patient.user.email}</td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${appt.patient.bloodGroup != null}"><span class="chip">${appt.patient.bloodGroup}</span></c:when>
+                                                <c:when test="${appt.patient.bloodGroup != null}"><span class="chip-danger" style="font-size:0.75rem;">${appt.patient.bloodGroup}</span></c:when>
                                                 <c:otherwise><span class="muted">—</span></c:otherwise>
                                             </c:choose>
                                         </td>
-                                        <td class="muted">${appt.patient.phone != null ? appt.patient.phone : '—'}</td>
-                                        <td>${appt.scheduledAt.toString().replace('T',' ').substring(0,16)}</td>
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${appt.status == 'PENDING'}"><span class="chip-warning">Pending</span></c:when>
-                                                <c:when test="${appt.status == 'CONFIRMED'}"><span class="chip">Confirmed</span></c:when>
-                                                <c:when test="${appt.status == 'COMPLETED'}"><span class="chip-neutral">Completed</span></c:when>
-                                                <c:otherwise><span class="chip-danger">${appt.status}</span></c:otherwise>
-                                            </c:choose>
-                                        </td>
+                                        <td class="muted" style="font-size:0.875rem;">${appt.patient.phone != null ? appt.patient.phone : '—'}</td>
+                                        <td class="muted" style="font-size:0.875rem;">${appt.patient.gender != null ? appt.patient.gender : '—'}</td>
                                         <td class="text-right">
-                                            <a class="btn btn-outline btn-sm" href="${pageContext.request.contextPath}/doctor/patient/${appt.patient.id}">View Details</a>
+                                            <a class="btn btn-primary btn-sm" href="${pageContext.request.contextPath}/doctor/patient/${appt.patient.id}">View Details</a>
                                         </td>
                                     </tr>
                                 </c:forEach>
                             </c:when>
                             <c:otherwise>
                                 <tr>
-                                    <td colspan="7" style="text-align:center;padding:2.5rem;" class="muted">
+                                    <td colspan="6" style="text-align:center;padding:2.5rem;" class="muted">
                                         <div style="font-size:2rem;margin-bottom:0.5rem;">👥</div>
                                         No patients yet. Patients will appear here once they book appointments.
                                     </td>
@@ -92,5 +90,13 @@
     </main>
 </div>
 <script src="<%= request.getContextPath() %>/assets/js/admin.js?v=3"></script>
+<script>
+function filterTable(input, tableId) {
+    const filter = input.value.toLowerCase();
+    document.getElementById(tableId).querySelectorAll('tbody tr').forEach(row => {
+        row.style.display = (row.innerText || row.textContent).toLowerCase().includes(filter) ? '' : 'none';
+    });
+}
+</script>
 </body>
 </html>

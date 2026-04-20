@@ -37,6 +37,8 @@ public class PatientController {
     @Autowired private DoctorReviewService reviewService;
     @Autowired private EmailService emailService;
 
+    @Autowired private AIService aiService;
+
     private Patient getSessionPatient(HttpSession session) {
         User user = (User) session.getAttribute("sessionUser");
         if (user == null) return null;
@@ -105,8 +107,14 @@ public class PatientController {
             model.addAttribute("patient", patient);
             model.addAttribute("appointments", appointmentService.findByPatientId(patient.getId()));
             model.addAttribute("prescriptions", prescriptionService.findByPatientId(patient.getId()));
-            model.addAttribute("latestMetric", healthMetricService.findLatestByPatientId(patient.getId()));
+            HealthMetric latest = healthMetricService.findLatestByPatientId(patient.getId());
+            model.addAttribute("latestMetric", latest);
             model.addAttribute("unreadCount", notificationService.countUnread(patient.getUser().getId()));
+            
+            // AI Hint for dashboard
+            if (latest != null) {
+                model.addAttribute("aiInsight", aiService.getQuickInsight(latest));
+            }
         }
         return "patient/dashboard";
     }
@@ -117,7 +125,13 @@ public class PatientController {
         if (patient != null) {
             model.addAttribute("patient", patient);
             model.addAttribute("metrics", healthMetricService.findByPatientId(patient.getId()));
-            model.addAttribute("latestMetric", healthMetricService.findLatestByPatientId(patient.getId()));
+            HealthMetric latest = healthMetricService.findLatestByPatientId(patient.getId());
+            model.addAttribute("latestMetric", latest);
+            
+            // AI Analysis for health page
+            if (latest != null) {
+                model.addAttribute("aiInsight", aiService.getQuickInsight(latest));
+            }
         }
         return "patient/health";
     }
@@ -158,8 +172,8 @@ public class PatientController {
                     : (patient.getAddress() != null && !patient.getAddress().isBlank() ? patient.getAddress() : "Unknown");
 
             String alertMsg = "Patient " + (patient.getUser() != null ? patient.getUser().getFullName() : "Unknown") + " has critical vitals! " +
-                              "Location: " + displayLocation + ". " +
-                              "Please review immediately.";
+                               "Location: " + displayLocation + ". " +
+                               "Please review immediately.";
             
             // 1. Notify all approved doctors
             for (Doctor d : doctorService.findApproved()) {
@@ -229,18 +243,35 @@ public class PatientController {
         Patient patient = getSessionPatient(session);
         if (patient != null) {
             model.addAttribute("patient", patient);
-            model.addAttribute("metrics", healthMetricService.findByPatientId(patient.getId()));
-            model.addAttribute("latestMetric", healthMetricService.findLatestByPatientId(patient.getId()));
+            List<HealthMetric> metrics = healthMetricService.findByPatientId(patient.getId());
+            model.addAttribute("metrics", metrics);
+            HealthMetric latest = healthMetricService.findLatestByPatientId(patient.getId());
+            model.addAttribute("latestMetric", latest);
+            
+            // AI Health Insight for analytics
+            if (latest != null) {
+                model.addAttribute("aiInsight", aiService.getQuickInsight(latest));
+            }
         }
         return "patient/analytics";
     }
+
+    @Autowired private com.smarthealth.repository.mongo.AILogRepository aiLogRepository;
 
     @GetMapping("/ai")
     public String ai(HttpSession session, Model model) {
         Patient patient = getSessionPatient(session);
         if (patient != null) {
             model.addAttribute("patient", patient);
-            model.addAttribute("latestMetric", healthMetricService.findLatestByPatientId(patient.getId()));
+            HealthMetric latest = healthMetricService.findLatestByPatientId(patient.getId());
+            model.addAttribute("latestMetric", latest);
+            
+            if (latest != null) {
+                model.addAttribute("aiInsight", aiService.getQuickInsight(latest));
+            }
+
+            // Fetch AI history
+            model.addAttribute("aiLogs", aiLogRepository.findByPatientIdOrderByTimestampDesc(patient.getId()));
         }
         return "patient/ai-checker";
     }

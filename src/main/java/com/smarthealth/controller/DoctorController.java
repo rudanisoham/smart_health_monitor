@@ -39,10 +39,22 @@ public class DoctorController {
         Doctor doctor = getSessionDoctor(session);
         if (doctor != null) {
             model.addAttribute("doctor", doctor);
-            model.addAttribute("appointments", appointmentService.findByDoctorId(doctor.getId()));
+            java.util.List<com.smarthealth.model.Appointment> appts = appointmentService.findByDoctorId(doctor.getId());
+            model.addAttribute("appointments", appts);
             model.addAttribute("appointmentCount", appointmentService.countByDoctorId(doctor.getId()));
             model.addAttribute("todayCount", appointmentService.countTodayByDoctorId(doctor.getId()));
             model.addAttribute("unreadCount", notificationService.countUnread(doctor.getUser().getId()));
+            // Unique recent patients (last 5 distinct)
+            java.util.List<com.smarthealth.model.Patient> recentPatients = appts.stream()
+                .map(com.smarthealth.model.Appointment::getPatient)
+                .filter(p -> p != null)
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                    java.util.stream.Collectors.toMap(
+                        com.smarthealth.model.Patient::getId, p -> p, (a, b) -> a,
+                        java.util.LinkedHashMap::new),
+                    m -> new java.util.ArrayList<>(m.values())))
+                .stream().limit(5).toList();
+            model.addAttribute("recentPatients", recentPatients);
         }
         return "doctor/dashboard";
     }
@@ -52,7 +64,13 @@ public class DoctorController {
         Doctor doctor = getSessionDoctor(session);
         if (doctor != null) {
             model.addAttribute("doctor", doctor);
-            model.addAttribute("appointments", appointmentService.findByDoctorId(doctor.getId()));
+            // Deduplicate: one row per unique patient
+            java.util.List<com.smarthealth.model.Appointment> appts = appointmentService.findByDoctorId(doctor.getId());
+            java.util.Map<Long, com.smarthealth.model.Appointment> uniqueMap = new java.util.LinkedHashMap<>();
+            for (com.smarthealth.model.Appointment a : appts) {
+                if (a.getPatient() != null) uniqueMap.putIfAbsent(a.getPatient().getId(), a);
+            }
+            model.addAttribute("uniquePatients", new java.util.ArrayList<>(uniqueMap.values()));
         }
         return "doctor/patient-list";
     }

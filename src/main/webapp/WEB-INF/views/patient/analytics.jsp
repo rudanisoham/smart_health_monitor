@@ -198,122 +198,46 @@
                             </div>
                         </div>
 
-                        <!-- ── AI Insights Panel ──────────────────────── -->
-                        <div class="card">
-                            <div class="card-header">
-                                <div>
-                                    <div class="section-title">🤖 AI Health Insights</div>
-                                    <div class="section-subtitle">Rule-based analysis of your ${metrics.size()} readings</div>
+                        <!-- ── AI Trend Report Panel ──────────────────────── -->
+                        <div class="card" style="background: #ffffff; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border-radius: 20px;">
+                            <div class="card-header" style="border-bottom: 1px dashed #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #f0f9ff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">📊</div>
+                                    <h3 class="card-title" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #1e293b;">AI Trend Intelligence</h3>
                                 </div>
+                                <span class="chip" style="background:#f0fdf4; color:#16a34a; font-weight:700;">LIVE</span>
                             </div>
+
                             <div class="mt-3">
+                                <c:choose>
+                                    <c:when test="${not empty aiInsight}">
+                                        <div style="font-size: 1.05rem; line-height: 1.7; color: #334155; padding: 1.5rem; background: #f8fafc; border-radius: 16px; border: 1px solid #f1f5f9; font-weight: 500;">
+                                            "${aiInsight}"
+                                        </div>
+                                        <div class="mt-4" style="display:flex; gap: 0.75rem; flex-direction: column;">
+                                            <div style="display:flex; align-items:center; gap: 0.5rem; font-size: 0.85rem; color: #64748b;">
+                                                <span style="font-size: 1rem;">✅</span>
+                                                <span>Personalized based on your historical data.</span>
+                                            </div>
+                                            <div style="display:flex; align-items:center; gap: 0.5rem; font-size: 0.85rem; color: #64748b;">
+                                                <span style="font-size: 1rem;">⚡</span>
+                                                <span>Updated every time you add a reading.</span>
+                                            </div>
+                                        </div>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div class="muted" style="padding:2rem; text-align:center; background:#f8fafc; border-radius:12px;">
+                                            <span style="font-size:2rem;display:block;margin-bottom:0.5rem;">🔍</span>
+                                            Not enough data for AI analysis.
+                                        </div>
+                                    </c:otherwise>
+                                </c:choose>
 
-                                <c:if test="${not empty latestMetric}">
-
-                                    <%-- Heart Rate Insight --%>
-                                    <c:if test="${latestMetric.heartRate != null}">
-                                        <c:choose>
-                                            <c:when test="${latestMetric.heartRate >= 60 and latestMetric.heartRate <= 100}">
-                                                <div class="insight-card">
-                                                    <strong>✅ Heart Rate is Normal</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">Your resting heart rate of ${latestMetric.heartRate} bpm is within the healthy range (60–100 bpm). Keep maintaining a regular exercise routine.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:when test="${latestMetric.heartRate > 100}">
-                                                <div class="insight-card warn">
-                                                    <strong>⚠️ Elevated Heart Rate</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">Your heart rate of ${latestMetric.heartRate} bpm is above normal. Consider rest, hydration, and consult your doctor if this persists.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <div class="insight-card">
-                                                    <strong>ℹ️ Low Heart Rate</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">Heart rate of ${latestMetric.heartRate} bpm is slightly below average. This may be normal for athletes. Monitor closely.</div>
-                                                </div>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </c:if>
-
-                                    <%-- BP Insight --%>
-                                    <c:if test="${latestMetric.bloodPressureSys != null}">
-                                        <c:choose>
-                                            <c:when test="${latestMetric.bloodPressureSys > 140}">
-                                                <div class="insight-card danger">
-                                                    <strong>🚨 High Blood Pressure (Stage 2)</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">BP of ${latestMetric.bloodPressureSys}/${latestMetric.bloodPressureDia} is dangerously high. Please consult your doctor immediately.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:when test="${latestMetric.bloodPressureSys > 120}">
-                                                <div class="insight-card warn">
-                                                    <strong>⚠️ Elevated Blood Pressure</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">BP of ${latestMetric.bloodPressureSys}/${latestMetric.bloodPressureDia} is in the pre-hypertension range. Reduce salt intake and monitor regularly.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <div class="insight-card">
-                                                    <strong>✅ Blood Pressure Normal</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">Your BP of ${latestMetric.bloodPressureSys}/${latestMetric.bloodPressureDia} mmHg is in the healthy range. Great job!</div>
-                                                </div>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </c:if>
-
-                                    <%-- SpO2 Insight --%>
-                                    <c:if test="${latestMetric.spo2 != null}">
-                                        <c:choose>
-                                            <c:when test="${latestMetric.spo2 < 90}">
-                                                <div class="insight-card danger">
-                                                    <strong>🚨 Critical SpO2 Level</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">SpO2 of ${latestMetric.spo2}% is critically low. Seek emergency care immediately.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:when test="${latestMetric.spo2 < 95}">
-                                                <div class="insight-card warn">
-                                                    <strong>⚠️ Low Blood Oxygen</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">SpO2 of ${latestMetric.spo2}% is below the normal threshold (95%). Rest and see your doctor if it doesn't improve.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <div class="insight-card">
-                                                    <strong>✅ Blood Oxygen Normal</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">SpO2 of ${latestMetric.spo2}% is excellent. Your lungs are functioning well.</div>
-                                                </div>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </c:if>
-
-                                    <%-- Temperature Insight --%>
-                                    <c:if test="${latestMetric.temperature != null}">
-                                        <c:choose>
-                                            <c:when test="${latestMetric.temperature > 38.5}">
-                                                <div class="insight-card danger">
-                                                    <strong>🚨 High Fever</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">Temperature of ${latestMetric.temperature}°C indicates high fever. Rest, stay hydrated, and consult a doctor.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:when test="${latestMetric.temperature > 37.5}">
-                                                <div class="insight-card warn">
-                                                    <strong>⚠️ Mild Fever</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">Temperature of ${latestMetric.temperature}°C is slightly elevated. Rest and monitor closely.</div>
-                                                </div>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <div class="insight-card">
-                                                    <strong>✅ Temperature Normal</strong>
-                                                    <div class="muted" style="font-size:0.85rem;margin-top:0.25rem;">Body temperature of ${latestMetric.temperature}°C is within the healthy range.</div>
-                                                </div>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </c:if>
-
-                                </c:if>
-
-                                <c:if test="${empty latestMetric}">
-                                    <div class="muted" style="padding:1.5rem;text-align:center;">No data available for analysis.</div>
-                                </c:if>
-
-                                <div class="mt-3" style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.75rem;font-size:0.78rem;color:var(--text-muted);">
-                                    ⚕ <em>This is rule-based analysis only. Always consult a qualified doctor for medical advice.</em>
+                                <div class="mt-4" style="background:#fefce8; border-radius:12px; padding:1rem; font-size:0.8rem; color:#854d0e; border: 1px solid #fef08a;">
+                                    ℹ This report is generated by AI. It provides general wellness info and is <u>not</u> a medical diagnosis.
+                                </div>
+                                <div class="mt-3">
+                                    <a href="${pageContext.request.contextPath}/patient/ai" class="btn btn-primary" style="width: 100%; justify-content: center; height: 48px; border-radius: 14px;">🤖 Run AI Checker</a>
                                 </div>
                             </div>
                         </div>

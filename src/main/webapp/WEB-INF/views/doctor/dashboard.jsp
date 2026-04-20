@@ -73,76 +73,43 @@
                 </div>
             </div>
 
-            <%-- Doctor Profile Summary + Appointments --%>
+            <%-- Recent Patients + Appointments --%>
             <div class="grid grid-2 mt-4">
 
-                <%-- Doctor Info Card --%>
+                <%-- Recent Patients Card --%>
                 <div class="card">
                     <div class="card-header">
                         <div>
-                            <div class="section-title">Your Profile</div>
-                            <div class="section-subtitle">Clinical identity and department</div>
+                            <div class="section-title">Recent Patients</div>
+                            <div class="section-subtitle">Last 5 unique patients from your appointments</div>
                         </div>
-                        <a href="${pageContext.request.contextPath}/doctor/profile" class="btn btn-outline btn-sm">Edit</a>
+                        <a href="${pageContext.request.contextPath}/doctor/patients" class="btn btn-outline btn-sm">View all</a>
                     </div>
-                    <div class="mt-3">
-                        <c:if test="${doctor != null}">
-                            <div class="stat-item">
-                                <div class="stat-info">
-                                    <span class="stat-label">Full Name</span>
-                                    <span class="stat-value" style="font-size:1rem;">Dr. ${doctor.user.fullName}</span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-info">
-                                    <span class="stat-label">Email</span>
-                                    <span class="stat-value" style="font-size:0.9rem;">${doctor.user.email}</span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-info">
-                                    <span class="stat-label">Specialty</span>
-                                    <span class="stat-value" style="font-size:1rem;"><span class="chip">${doctor.specialty}</span></span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-info">
-                                    <span class="stat-label">License #</span>
-                                    <span class="stat-value" style="font-size:0.9rem;">${doctor.licenseNumber}</span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-info">
-                                    <span class="stat-label">Department</span>
-                                    <span class="stat-value" style="font-size:1rem;">
-                                        <c:choose>
-                                            <c:when test="${doctor.department != null}">${doctor.department.name}</c:when>
-                                            <c:otherwise><span class="muted">Not assigned</span></c:otherwise>
-                                        </c:choose>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-info">
-                                    <span class="stat-label">Experience</span>
-                                    <span class="stat-value" style="font-size:1rem;">${doctor.experience != null ? doctor.experience.toString().concat(' years') : '—'}</span>
-                                </div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-info">
-                                    <span class="stat-label">Status</span>
-                                    <span class="stat-value">
-                                        <c:choose>
-                                            <c:when test="${doctor.approved}"><span class="chip">✓ Approved</span></c:when>
-                                            <c:otherwise><span class="chip-warning">⏳ Pending Approval</span></c:otherwise>
-                                        </c:choose>
-                                    </span>
-                                </div>
-                            </div>
-                        </c:if>
-                        <c:if test="${doctor == null}">
-                            <div class="muted" style="padding:1.5rem;text-align:center;">Doctor profile not found.</div>
-                        </c:if>
+                    <div class="mt-2">
+                        <c:choose>
+                            <c:when test="${not empty recentPatients}">
+                                <c:forEach var="pt" items="${recentPatients}">
+                                    <div class="stat-item" style="padding:0.75rem 0;">
+                                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                                            <div style="width:38px;height:38px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);font-size:0.95rem;flex-shrink:0;">
+                                                ${pt.user.fullName.substring(0,1)}
+                                            </div>
+                                            <div>
+                                                <div style="font-weight:600;font-size:0.9rem;">${pt.user.fullName}</div>
+                                                <div class="muted" style="font-size:0.78rem;">${pt.user.email}</div>
+                                            </div>
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                                            <c:if test="${pt.bloodGroup != null}"><span class="chip-danger" style="font-size:0.72rem;">${pt.bloodGroup}</span></c:if>
+                                            <a href="${pageContext.request.contextPath}/doctor/patient/${pt.id}" class="btn btn-outline btn-sm" style="font-size:0.78rem;padding:0.3rem 0.6rem;">View</a>
+                                        </div>
+                                    </div>
+                                </c:forEach>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="muted" style="padding:1.5rem;text-align:center;">No patients yet.</div>
+                            </c:otherwise>
+                        </c:choose>
                     </div>
                 </div>
 

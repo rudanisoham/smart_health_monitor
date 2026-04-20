@@ -126,14 +126,18 @@
                         <c:otherwise><div class="empty-val">—<span style="font-size:0.85rem;"> %</span></div></c:otherwise>
                     </c:choose>
                 </div>
-                <div class="vital-card">
-                    <div class="label">🌡 Temperature</div>
-                    <c:choose>
-                        <c:when test="${not empty latestMetric and latestMetric.temperature != null}">
-                            <div class="val">${latestMetric.temperature}<span>°C</span></div>
-                        </c:when>
-                        <c:otherwise><div class="empty-val">—<span style="font-size:0.85rem;"> °C</span></div></c:otherwise>
-                    </c:choose>
+                <div class="vital-card" style="background: #f0f9ff; border-color: #bae6fd; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.05);">
+                    <div class="label" style="color: #0369a1; font-weight: 800;">🤖 AI Insight</div>
+                    <div style="font-size: 0.88rem; color: #1e293b; line-height: 1.5; margin-top: 0.6rem; font-weight: 600;">
+                        <c:choose>
+                            <c:when test="${not empty aiInsight}">
+                                "${aiInsight}"
+                            </c:when>
+                            <c:otherwise>
+                                <span style="color: #64748b; font-weight: 400;">Add a health reading to get your first AI analysis.</span>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
                 </div>
             </div>
 
