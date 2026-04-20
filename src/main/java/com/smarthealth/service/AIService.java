@@ -11,7 +11,7 @@ import java.util.*;
 @Service
 public class AIService {
 
-    private final String MISTRAL_API_KEY = "hwQn32pH1UlR5nUiCz65sDBoQcTObIXc";
+    private final String MISTRAL_API_KEY = "";
     private final String MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
