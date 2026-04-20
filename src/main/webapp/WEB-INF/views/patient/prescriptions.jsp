@@ -38,8 +38,8 @@
                             <th>Diagnosis</th>
                             <th>Doctor</th>
                             <th>Medicines</th>
-                            <th>Instructions</th>
                             <th>Valid Until</th>
+                            <th class="text-right">Action</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -57,12 +57,6 @@
                                             </c:if>
                                         </td>
                                         <td style="max-width:200px;">${rx.medicines}</td>
-                                        <td style="max-width:180px;" class="muted">
-                                            <c:choose>
-                                                <c:when test="${rx.instructions != null}">${rx.instructions}</c:when>
-                                                <c:otherwise>—</c:otherwise>
-                                            </c:choose>
-                                        </td>
                                         <td>
                                             <c:choose>
                                                 <c:when test="${rx.validUntil != null}">
@@ -70,6 +64,9 @@
                                                 </c:when>
                                                 <c:otherwise><span class="muted">Ongoing</span></c:otherwise>
                                             </c:choose>
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="${pageContext.request.contextPath}/patient/prescriptions/${rx.id}" class="btn btn-primary btn-sm">Details</a>
                                         </td>
                                     </tr>
                                 </c:forEach>
