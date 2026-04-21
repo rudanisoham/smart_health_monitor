@@ -385,6 +385,20 @@ public class PatientController {
         return "patient/prescriptions";
     }
 
+    @GetMapping("/prescriptions/{id}")
+    public String prescriptionDetail(@PathVariable Long id, HttpSession session, Model model,
+                                     org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+        Prescription rx = prescriptionService.findById(id).orElse(null);
+        if (rx == null || !rx.getPatient().getId().equals(patient.getId())) {
+            ra.addFlashAttribute("error", "Prescription not found.");
+            return "redirect:/patient/prescriptions";
+        }
+        model.addAttribute("prescription", rx);
+        return "patient/prescription-detail";
+    }
+
     @GetMapping("/reports")
     public String reports(HttpSession session, Model model) {
         Patient patient = getSessionPatient(session);

@@ -11,7 +11,7 @@
     <meta charset="UTF-8">
     <title>AI Health Check · Smart Health Monitor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/admin.css?v=4">
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/admin.css?v=3">
     <style>
         :root {
             --ai-primary: #3b82f6;
@@ -196,6 +196,7 @@
     </main>
 </div>
 
+<script src="<%= request.getContextPath() %>/assets/js/admin.js?v=3"></script>
 <script>
     // ── Symptom chip toggle ──────────────────────────────────
     const chips = document.querySelectorAll('.symptom-chip');
