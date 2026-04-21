@@ -54,7 +54,23 @@ a { color: inherit; text-decoration: none; }
   padding: 2.25rem 1.5rem; display: flex; flex-direction: column; gap: 1.75rem;
   position: sticky; top: 0; height: 100vh; z-index: 40;
   transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Custom Thin Scrollbar for Sidebar */
+.admin-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+.admin-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-sidebar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+.admin-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-sidebar);
 }
 
 /* Sidebar Collapsed State - Icon Only View */

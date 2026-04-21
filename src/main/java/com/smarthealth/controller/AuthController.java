@@ -47,8 +47,6 @@ public class AuthController {
         return "auth/doctor-register";
     }
 
-    @GetMapping("/reception/login")
-    public String receptionLogin() { return "auth/reception-login"; }
 
     // ── POST login ────────────────────────────────────────────────────────
     @PostMapping("/login")
