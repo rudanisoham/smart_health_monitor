@@ -1,4 +1,3 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <aside class="admin-sidebar">
     <div class="sidebar-logo">
         <div class="sidebar-logo-icon">SH</div>
@@ -101,6 +100,17 @@
             <span class="sidebar-text">Reports</span>
         </a>
 
+        <a href="<%= request.getContextPath() %>/patient/reminders"
+           class="sidebar-link <%= "reminders".equals(request.getAttribute("activePage")) ? "active" : "" %>">
+            <span class="icon">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </span>
+            <span class="sidebar-text">Reminders</span>
+        </a>
+
         <a href="<%= request.getContextPath() %>/patient/notifications"
            class="sidebar-link <%= "notifications".equals(request.getAttribute("activePage")) ? "active" : "" %>">
             <span class="icon">
@@ -110,6 +120,17 @@
                 </svg>
             </span>
             <span class="sidebar-text">Notifications</span>
+        </a>
+
+        <a href="<%= request.getContextPath() %>/patient/billing"
+           class="sidebar-link <%= "billing".equals(request.getAttribute("activePage")) ? "active" : "" %>">
+            <span class="icon">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+            </span>
+            <span class="sidebar-text">Billing & Bed</span>
         </a>
 
         <a href="<%= request.getContextPath() %>/patient/profile"

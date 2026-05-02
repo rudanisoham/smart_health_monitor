@@ -18,21 +18,24 @@ import java.util.ArrayList;
 @RequestMapping("/admin")
 public class AdminController {
 
+    @Autowired private UserService userService;
     @Autowired private DoctorService doctorService;
     @Autowired private PatientService patientService;
-    @Autowired private DepartmentService departmentService;
-    @Autowired private UserService userService;
     @Autowired private AppointmentService appointmentService;
-    @Autowired private SystemLogService logService;
     @Autowired private DashboardService dashboardService;
+    @Autowired private SystemLogService logService;
+    @Autowired private DepartmentService departmentService;
     @Autowired private BedService bedService;
     @Autowired private ContactMessageService contactService;
+    @Autowired private MedicineService medicineService;
     @Autowired private AdminMessageService adminMessageService;
+    @Autowired private DoctorReviewService reviewService;
     @Autowired private NotificationService notificationService;
     @Autowired private EmailService emailService;
     @Autowired private PrescriptionService prescriptionService;
     @Autowired private HealthMetricService healthMetricService;
     @Autowired private MedicalReportService medicalReportService;
+    @Autowired private SiteContentService siteContentService;
 
     // ── Broadcast Messaging ───────────────────────────────────────────────
 
@@ -160,7 +163,6 @@ public class AdminController {
         return "redirect:/admin/feedback";
     }
 
-    @Autowired private DoctorReviewService reviewService;
 
     @GetMapping("/feedback/{id}/delete")
     public String deleteFeedback(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
@@ -186,6 +188,7 @@ public class AdminController {
         model.addAttribute("recentLogs", logService.findRecent());
         return "admin/dashboard";
     }
+
 
     // ── Doctors ───────────────────────────────────────────────────────────
     @GetMapping("/doctors")
@@ -220,19 +223,29 @@ public class AdminController {
             ra.addFlashAttribute("error", "Email already exists.");
             return "redirect:/admin/doctors/add";
         }
+        if (doctorService.existsByLicenseNumber(licenseNumber)) {
+            ra.addFlashAttribute("error", "License number already registered.");
+            return "redirect:/admin/doctors/add";
+        }
         User user = new User();
         user.setFullName(fullName); user.setEmail(email);
         user.setPassword(password); user.setRole(Role.DOCTOR);
         user.setPhone(phone);
-        User saved = userService.register(user);
+        // userService.register(user) is now called inside doctorService.registerDoctor
 
         Doctor doctor = new Doctor();
-        doctor.setUser(saved); doctor.setSpecialty(specialty);
-        doctor.setLicenseNumber(licenseNumber); doctor.setPhone(phone);
-        doctor.setExperience(experience); doctor.setApproved(true);
+        doctor.setSpecialty(specialty);
+        doctor.setLicenseNumber(licenseNumber);
+        doctor.setPhone(phone);
+        doctor.setExperience(experience);
+        if (departmentId != null) {
+            departmentService.findById(departmentId).ifPresent(doctor::setDepartment);
+        }
+        doctor.setApproved(true);
         doctor.setStatus("ACTIVE");
-        if (departmentId != null) departmentService.findById(departmentId).ifPresent(doctor::setDepartment);
-        doctorService.save(doctor);
+
+        // Transactional save for both User and Doctor
+        doctorService.registerDoctor(user, doctor);
 
         // Send welcome email with credentials
         emailService.sendWelcomeCredentials(email, fullName, "DOCTOR", password);
@@ -252,9 +265,17 @@ public class AdminController {
     @PostMapping("/doctors/{id}/approve")
     public String approveDoctor(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
         doctorService.approve(id);
+
+        // Send approval email to the doctor
+        doctorService.findById(id).ifPresent(doctor -> {
+            String email = doctor.getUser().getEmail();
+            String name = doctor.getUser().getFullName();
+            emailService.sendDoctorApprovalEmail(email, name, doctor.getSpecialty());
+        });
+
         User admin = (User) session.getAttribute("sessionUser");
         logService.info("Doctor approved, ID=" + id, admin != null ? admin.getFullName() : "Admin");
-        ra.addFlashAttribute("success", "Doctor approved.");
+        ra.addFlashAttribute("success", "Doctor approved and notified via email.");
         return "redirect:/admin/doctors/requests";
     }
 
@@ -314,6 +335,14 @@ public class AdminController {
         return "admin/manage-staff";
     }
 
+    @GetMapping("/lab-staff")
+    public String viewLabStaff(Model model) {
+        model.addAttribute("staff", userService.findByRole(Role.LAB_STAFF));
+        model.addAttribute("roleTitle", "Lab Staff");
+        model.addAttribute("roleKey", "LAB_STAFF");
+        return "admin/manage-staff";
+    }
+
     @GetMapping("/staff/add")
     public String addStaffForm(@RequestParam String role, Model model) {
         model.addAttribute("role", role);
@@ -341,7 +370,7 @@ public class AdminController {
         User admin = (User) session.getAttribute("sessionUser");
         logService.info("Admin added " + role + ": " + fullName, admin != null ? admin.getFullName() : "Admin");
         ra.addFlashAttribute("success", role + " added successfully. Credentials sent to " + email);
-        return "redirect:/admin/" + (role.equals("RECEPTIONIST") ? "receptionists" : "medical-staff");
+        return "redirect:/admin/" + (role.equals("RECEPTIONIST") ? "receptionists" : role.equals("LAB_STAFF") ? "lab-staff" : "medical-staff");
     }
 
     @GetMapping("/staff/{id}/delete")
@@ -350,7 +379,7 @@ public class AdminController {
         User admin = (User) session.getAttribute("sessionUser");
         logService.warn(role + " deleted, ID=" + id, admin != null ? admin.getFullName() : "Admin");
         ra.addFlashAttribute("success", "User deleted.");
-        return "redirect:/admin/" + (role.equals("RECEPTIONIST") ? "receptionists" : "medical-staff");
+        return "redirect:/admin/" + (role.equals("RECEPTIONIST") ? "receptionists" : role.equals("LAB_STAFF") ? "lab-staff" : "medical-staff");
     }
 
 
@@ -567,5 +596,21 @@ public class AdminController {
         }
         session.setAttribute("sessionUser", userService.findById(admin.getId()).orElse(admin));
         return "redirect:/admin/settings";
+    }
+
+    // ── Site Content Management ──────────────────────────────────────────
+    @GetMapping("/site-content")
+    public String viewSiteContent(Model model) {
+        model.addAttribute("content", siteContentService.getSiteContent());
+        return "admin/site-content";
+    }
+
+    @PostMapping("/site-content/update")
+    public String updateSiteContent(@ModelAttribute SiteContent content, HttpSession session, RedirectAttributes ra) {
+        siteContentService.save(content);
+        User admin = (User) session.getAttribute("sessionUser");
+        logService.info("Admin updated site content configuration.", admin != null ? admin.getFullName() : "Admin");
+        ra.addFlashAttribute("success", "Site content updated successfully!");
+        return "redirect:/admin/site-content";
     }
 }

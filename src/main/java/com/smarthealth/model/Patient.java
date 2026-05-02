@@ -69,4 +69,28 @@ public class Patient {
 
     public Doctor getAssignedDoctor() { return assignedDoctor; }
     public void setAssignedDoctor(Doctor assignedDoctor) { this.assignedDoctor = assignedDoctor; }
+
+    @Column
+    private java.time.LocalTime morningReminderTime = java.time.LocalTime.of(8, 0);
+
+    @Column
+    private java.time.LocalTime afternoonReminderTime = java.time.LocalTime.of(13, 0);
+
+    @Column
+    private java.time.LocalTime nightReminderTime = java.time.LocalTime.of(20, 0);
+
+    @Column
+    private Boolean medicineRemindersEnabled = true;
+
+    public java.time.LocalTime getMorningReminderTime() { return morningReminderTime; }
+    public void setMorningReminderTime(java.time.LocalTime morningReminderTime) { this.morningReminderTime = morningReminderTime; }
+
+    public java.time.LocalTime getAfternoonReminderTime() { return afternoonReminderTime; }
+    public void setAfternoonReminderTime(java.time.LocalTime afternoonReminderTime) { this.afternoonReminderTime = afternoonReminderTime; }
+
+    public java.time.LocalTime getNightReminderTime() { return nightReminderTime; }
+    public void setNightReminderTime(java.time.LocalTime nightReminderTime) { this.nightReminderTime = nightReminderTime; }
+
+    public Boolean getMedicineRemindersEnabled() { return medicineRemindersEnabled; }
+    public void setMedicineRemindersEnabled(Boolean medicineRemindersEnabled) { this.medicineRemindersEnabled = medicineRemindersEnabled; }
 }

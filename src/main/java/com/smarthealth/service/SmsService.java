@@ -12,15 +12,15 @@ import java.nio.charset.StandardCharsets;
 public class SmsService {
 
     // ───────────────── FAST2SMS CONFIGURATION ─────────────────
-    // Step 1: Sign up at Fast2SMS.com and get your API Key
-    // Step 2: Replace this placeholder with your literal API Key
-    private static final String FAST2SMS_API_KEY = "96aCIymGOTCuqWR8df3ijpzuXTnqq7Uq53f14bNWGaIZzeMrvulZYDUNGLjZ";
+    private String getApiKey() {
+        return com.smarthealth.config.EnvConfig.get("FAST2SMS_API_KEY", "PASTE_YOUR_FAST2SMS_API_KEY_HERE");
+    }
     // ─────────────────────────────────────────────────────────
 
     public boolean sendSms(String toNumber, String content) {
         try {
             // Check if API key is still a placeholder
-            if ("PASTE_YOUR_FAST2SMS_API_KEY_HERE".equals(FAST2SMS_API_KEY)) {
+            if ("PASTE_YOUR_FAST2SMS_API_KEY_HERE".equals(getApiKey())) {
                 System.out.println("[FAST2SMS SIMULATION] To: " + toNumber + " | Msg: " + content);
                 return true; // Return true as simulation success
             }
@@ -30,7 +30,7 @@ public class SmsService {
             String encodedNumber = URLEncoder.encode(toNumber.replaceAll("[^0-9]", ""), StandardCharsets.UTF_8);
 
             // Fast2SMS Quick SMS Route (route=q)
-            String apiUrl = "https://www.fast2sms.com/dev/bulkV2?authorization=" + FAST2SMS_API_KEY +
+            String apiUrl = "https://www.fast2sms.com/dev/bulkV2?authorization=" + getApiKey() +
                     "&route=q&message=" + encodedMessage + "&language=english&flash=0&numbers=" + encodedNumber;
 
             URL url = new URL(apiUrl);

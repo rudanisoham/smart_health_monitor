@@ -123,6 +123,32 @@
                                         <div class="muted text-center" style="padding:2rem;">No health vitals recorded by this patient.</div>
                                     </c:otherwise>
                                 </c:choose>
+
+                                <%-- One-click Emergency Bed Assignment --%>
+                                <c:if test="${not empty metrics[0] && metrics[0].riskLevel == 'HIGH'}">
+                                    <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px dashed rgba(239, 68, 68, 0.2);">
+                                        <div style="font-size:0.75rem; font-weight:700; color:#ef4444; text-transform:uppercase; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.4rem;">
+                                            <span style="display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%; animation: pulse 1.5s infinite;"></span>
+                                            Emergency Protocol Detected
+                                        </div>
+                                        <form action="${pageContext.request.contextPath}/doctor/patient/${patient.id}/assign-bed" method="post">
+                                            <button type="submit" class="btn btn-danger btn-block" 
+                                                    style="width:100%; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border:none; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); font-weight:700;">
+                                                ONE-CLICK BED ASSIGNMENT
+                                            </button>
+                                        </form>
+                                        <p style="font-size:0.7rem; color:var(--text-muted); margin-top:0.5rem; text-align:center;">
+                                            This will automatically find and assign the first available bed in your department.
+                                        </p>
+                                    </div>
+                                    <style>
+                                        @keyframes pulse {
+                                            0% { opacity: 1; transform: scale(1); }
+                                            50% { opacity: 0.5; transform: scale(1.2); }
+                                            100% { opacity: 1; transform: scale(1); }
+                                        }
+                                    </style>
+                                </c:if>
                             </div>
                         </div>
                     </div>
@@ -209,6 +235,74 @@
                                     <c:otherwise>
                                         <tr>
                                             <td colspan="4" class="muted text-center" style="padding: 2rem;">No documentation uploaded by the patient.</td>
+                                        </tr>
+                                    </c:otherwise>
+                                </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <%-- Lab Diagnostic History --%>
+                    <div class="card mt-4">
+                        <div class="card-header pb-3">
+                            <div>
+                                <div class="section-title">Lab Diagnostic History</div>
+                                <div class="section-subtitle">Official hospital laboratory investigations</div>
+                            </div>
+                        </div>
+                        <div class="table-container mt-2">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Requested At</th>
+                                    <th>Test Name</th>
+                                    <th>Status</th>
+                                    <th>Result / Action</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <c:choose>
+                                    <c:when test="${not empty groupedLabRequests}">
+                                        <c:forEach var="entry" items="${groupedLabRequests}">
+                                            <c:set var="group" value="${entry.value}" />
+                                            <c:set var="first" value="${group[0]}" />
+                                            <tr>
+                                                <td style="white-space:nowrap;">${first.requestedAt.toString().replace('T',' ').substring(0,16)}</td>
+                                                <td>
+                                                    <div style="font-weight:700; color:#1e293b;">
+                                                        <c:if test="${group.size() > 1}">Diagnostic Session (${group.size()} Tests)</c:if>
+                                                        <c:if test="${group.size() == 1}">${first.labTest.name}</c:if>
+                                                    </div>
+                                                    <div class="muted" style="font-size:0.75rem;">
+                                                        <c:forEach var="req" items="${group}" varStatus="vs">
+                                                            ${req.labTest.name}${!vs.last ? ', ' : ''}
+                                                        </c:forEach>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge ${first.status == 'COMPLETED' ? 'badge-success' : (first.status == 'IN_PROGRESS' ? 'badge-info' : 'badge-warning')}">
+                                                        ${first.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div style="display:flex; gap:0.5rem;">
+                                                        <c:if test="${not empty first.resultFileUrl}">
+                                                            <a href="${pageContext.request.contextPath}${first.resultFileUrl}" target="_blank" class="btn btn-outline btn-sm" title="Download Report">
+                                                                <i class="fas fa-file-pdf"></i>
+                                                            </a>
+                                                        </c:if>
+                                                        <a href="${pageContext.request.contextPath}/doctor/lab-group/${entry.key}" class="btn btn-primary btn-sm">
+                                                            <i class="fas fa-eye"></i> Details
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <tr>
+                                            <td colspan="4" class="muted text-center" style="padding: 2rem;">No hospital lab tests found for this patient.</td>
                                         </tr>
                                     </c:otherwise>
                                 </c:choose>

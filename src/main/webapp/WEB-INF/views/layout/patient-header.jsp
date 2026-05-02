@@ -7,17 +7,15 @@
         <div>
             <div class="page-title">
                 <%= request.getAttribute("pageTitle") != null ? request.getAttribute("pageTitle") : "Patient Portal" %>
-            </div>
-            <div class="page-title">
-                <span>
-                    <%= request.getAttribute("pageSubtitle") != null ? request.getAttribute("pageSubtitle") : "Smart Health Monitor" %>
+                <span class="page-subtitle-mobile">
+                    <%= request.getAttribute("pageSubtitle") != null ? request.getAttribute("pageSubtitle") : "" %>
                 </span>
             </div>
         </div>
     </div>
     <div class="header-right">
         <div class="header-pill">
-            <span>●</span>
+            <span>&bull;</span>
             <span>Signed in</span>
         </div>
         <div class="header-avatar" title="Patient">

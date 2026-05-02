@@ -3,7 +3,7 @@
 <%
     Object roleObj = request.getAttribute("roleKey");
     String roleKey = (roleObj != null) ? roleObj.toString() : "";
-    String activePage = roleKey.equalsIgnoreCase("RECEPTIONIST") ? "receptionists" : "medical-staff";
+    String activePage = roleKey.equalsIgnoreCase("RECEPTIONIST") ? "receptionists" : roleKey.equalsIgnoreCase("LAB_STAFF") ? "lab-staff" : "medical-staff";
     request.setAttribute("activePage", activePage);
     request.setAttribute("pageTitle", "Staff Management");
 %>

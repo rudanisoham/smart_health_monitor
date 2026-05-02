@@ -15,9 +15,11 @@ import org.springframework.web.multipart.support.StandardServletMultipartResolve
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
 @EnableWebMvc
+@EnableScheduling
 @ComponentScan(basePackages = "com.smarthealth")
 @Import({JpaConfig.class, MongoConfig.class, MailConfig.class})
 public class WebConfig implements WebMvcConfigurer {

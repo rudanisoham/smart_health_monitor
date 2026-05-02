@@ -1,16 +1,21 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Forgot password Â· Smart Health Monitor</title>
+    <title>Forgot password · Smart Health Monitor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/admin.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 <div class="login-page">
     <div class="login-card">
         <div class="login-main">
+            <a href="${pageContext.request.contextPath}/" class="btn-back-home">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
             <div class="login-badge">
                 <span>Password reset</span>
             </div>

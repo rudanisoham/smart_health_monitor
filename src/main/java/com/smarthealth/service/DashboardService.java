@@ -7,16 +7,20 @@ import com.smarthealth.repository.jpa.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@Transactional(readOnly = true)
 public class DashboardService {
 
     @Autowired private UserRepository userRepository;
     @Autowired private DoctorRepository doctorRepository;
     @Autowired private PatientRepository patientRepository;
     @Autowired private AppointmentRepository appointmentRepository;
+    @Autowired private DepartmentService departmentService;
 
     public Map<String, Object> getAdminStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -27,6 +31,7 @@ public class DashboardService {
         stats.put("totalPatients", patientRepository.count());
         stats.put("totalAppointments", appointmentRepository.count());
         stats.put("awaitingAssignment", appointmentRepository.countByStatus("AWAITING_ASSIGNMENT"));
+        stats.put("activeDepartments", departmentService.count());
         return stats;
     }
 }

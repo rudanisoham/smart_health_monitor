@@ -208,69 +208,7 @@ public class MedicalStaffController {
         return medicineService.search(q);
     }
 
-    // ── Report Management ─────────────────────────────────────────────────
-    @GetMapping("/reports")
-    public String reportList(Model model) {
-        model.addAttribute("reports", medicalReportService.findAll());
-        return "medical/report-list";
-    }
-
-    @GetMapping("/reports/upload")
-    public String uploadReportForm(Model model) {
-        model.addAttribute("patients", patientService.findAll());
-        return "medical/upload-report";
-    }
-
-    @PostMapping("/reports/upload")
-    public String uploadReport(@RequestParam Long patientId,
-                               @RequestParam String title,
-                               @RequestParam(required = false) String type,
-                               @RequestParam(required = false) String description,
-                               @RequestParam(required = false) String results,
-                               @RequestParam(required = false) MultipartFile reportFile,
-                               HttpSession session, RedirectAttributes ra) {
-        Patient patient = patientService.findById(patientId).orElse(null);
-        if (patient == null) { ra.addFlashAttribute("error", "Patient not found."); return "redirect:/medical/reports/upload"; }
-
-        MedicalReport report = new MedicalReport();
-        report.setPatient(patient);
-        report.setTitle(title);
-        report.setDescription(description);
-        report.setResults(results);
-        report.setStatus(MedicalReport.ReportStatus.PENDING);
-        User u = getSessionUser(session);
-        report.setUploadedBy(u != null ? u.getFullName() : "Medical Staff");
-
-        if (type != null && !type.isBlank()) {
-            try { report.setType(MedicalReport.ReportType.valueOf(type)); } catch (Exception ignored) {}
-        }
-
-        if (reportFile != null && !reportFile.isEmpty()) {
-            try {
-                String uploadDir = session.getServletContext().getRealPath("/") + "uploads/reports/";
-                new File(uploadDir).mkdirs();
-                String fileName = UUID.randomUUID() + "_" + reportFile.getOriginalFilename();
-                Path path = Paths.get(uploadDir + fileName);
-                Files.write(path, reportFile.getBytes());
-                report.setFilePath("/uploads/reports/" + fileName);
-            } catch (Exception e) {
-                ra.addFlashAttribute("error", "File upload failed: " + e.getMessage());
-                return "redirect:/medical/reports/upload";
-            }
-        }
-
-        medicalReportService.save(report);
-
-        notificationService.send(patient.getUser().getId(), "PATIENT",
-                "New Medical Report",
-                "A new report '" + title + "' has been uploaded for you. Please check your reports section.",
-                "INFO");
-
-        logService.info("Report uploaded for patient #" + patientId + ": " + title,
-                u != null ? u.getFullName() : "Medical Staff");
-        ra.addFlashAttribute("success", "Report uploaded and patient notified.");
-        return "redirect:/medical/reports";
-    }
+    // ── Report Management has been migrated to Lab Portal ──
 
     @GetMapping("/prescriptions/{id}")
     public String prescriptionDetail(@PathVariable Long id, Model model, RedirectAttributes ra) {

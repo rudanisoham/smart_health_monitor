@@ -1,4 +1,3 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <header class="admin-header">
     <div class="header-left">
         <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-label="Toggle sidebar">

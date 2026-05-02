@@ -96,18 +96,71 @@
                     <div class="section-subtitle mt-1">Select doctor, set time — token is auto-generated</div>
 
                     <form action="${pageContext.request.contextPath}/reception/appointments/${appointment.id}/assign" method="post" class="form-grid mt-3">
-                        <div class="form-group">
-                            <label for="doctorId">Confirm / Select Doctor</label>
-                            <select id="doctorId" name="doctorId" class="form-select" required onchange="showSchedule(this.value)">
-                                <option value="">-- Choose a Doctor --</option>
-                                <c:forEach var="doc" items="${doctors}">
-                                    <option value="${doc.id}" ${doc.id == appointment.doctor.id ? 'selected' : ''}>
-                                        Dr. ${doc.user.fullName}
-                                        <c:if test="${doc.specialty != null}"> — ${doc.specialty}</c:if>
-                                        <c:if test="${doc.department != null}"> (${doc.department.name})</c:if>
-                                    </option>
-                                </c:forEach>
-                            </select>
+                        <style>
+                            .searchable-dropdown { position: relative; }
+                            .dropdown-list {
+                                position: absolute; top: calc(100% + 5px); left: 0; right: 0;
+                                background: white; border: 1px solid #e2e8f0;
+                                border-radius: 16px; max-height: 320px; overflow-y: auto; z-index: 1000;
+                                box-shadow: 0 15px 40px -10px rgba(0,0,0,0.12), 0 10px 20px -10px rgba(0,0,0,0.08);
+                                display: none; transition: all 0.2s;
+                            }
+                            .dropdown-item {
+                                padding: 0.9rem 1.25rem; cursor: pointer;
+                                transition: all 0.2s; border-bottom: 1px solid #f8fafc;
+                            }
+                            .dropdown-item:last-child { border-bottom: none; }
+                            .dropdown-item:hover { background: #f1f5f9; }
+                            .dropdown-item.active { background: #eff6ff; }
+                            .dropdown-item-title { font-weight: 700; color: #1e293b; font-size: 0.95rem; line-height: 1.4; }
+                            .dropdown-item-subtitle { color: #64748b; font-size: 0.8rem; margin-top: 0.15rem; }
+                            .form-control { border-radius: 12px !important; }
+                        </style>
+
+                        <div class="form-group" style="grid-column:1/-1;">
+                            <label>Quick Filters</label>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
+                                <select id="filterSpecialty" class="form-control" onchange="filterSearchDropdown()">
+                                    <option value="">All Specialties</option>
+                                    <c:forEach var="spec" items="${specialties}">
+                                        <option value="${spec}">${spec}</option>
+                                    </c:forEach>
+                                </select>
+                                <select id="filterDepartment" class="form-control" onchange="filterSearchDropdown()">
+                                    <option value="">All Departments</option>
+                                    <c:forEach var="dept" items="${departments}">
+                                        <option value="${dept.name}">${dept.name}</option>
+                                    </c:forEach>
+                                </select>
+                            </div>
+
+                            <label for="doctorSearch">Confirm / Select Doctor</label>
+                            <div class="searchable-dropdown">
+                                <input type="text" id="doctorSearch" class="form-control" 
+                                       placeholder="Search by doctor name or keywords..." 
+                                       autocomplete="off"
+                                       value="Dr. ${appointment.doctor.user.fullName}"
+                                       onfocus="toggleDropdown(true)" 
+                                       oninput="filterSearchDropdown()">
+                                <input type="hidden" id="doctorId" name="doctorId" value="${appointment.doctor.id}">
+                                <svg style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#94a3b8; pointer-events:none;" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                
+                                <div id="doctorDropdownList" class="dropdown-list">
+                                    <c:forEach var="doc" items="${doctors}">
+                                        <div class="dropdown-item doctor-opt" 
+                                             data-id="${doc.id}"
+                                             data-name="Dr. ${doc.user.fullName}"
+                                             data-specialty="${doc.specialty}"
+                                             data-dept="${doc.department != null ? doc.department.name : ''}"
+                                             data-available-days="${doc.availableDays}"
+                                             data-search="Dr. ${doc.user.fullName} ${doc.specialty} ${doc.department.name}"
+                                             onclick="selectDoctor('${doc.id}', 'Dr. ${doc.user.fullName}', '${doc.availableDays}')">
+                                            <div class="dropdown-item-title">Dr. ${doc.user.fullName}</div>
+                                            <div class="dropdown-item-subtitle">${doc.specialty} <c:if test="${doc.department != null}">• ${doc.department.name}</c:if></div>
+                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -115,7 +168,7 @@
                             <input type="datetime-local" id="scheduledAt" name="scheduledAt" class="form-control"
                                    required min="<%= minDt %>"
                                    value="${appointment.preferredDate != null ? appointment.preferredDate.toString().concat('T09:00') : ''}"
-                                   onchange="updateTokenPreview()">
+                                   onchange="filterDoctorsByDate(); updateTokenPreview();">
                         </div>
 
                         <!-- Token Preview -->
@@ -180,6 +233,83 @@
 </div>
 
 <script>
+function toggleDropdown(show) {
+    const list = document.getElementById('doctorDropdownList');
+    if (show) {
+        list.style.display = 'block';
+        filterSearchDropdown(); 
+    } else {
+        setTimeout(() => { list.style.display = 'none'; }, 200);
+    }
+}
+
+function filterSearchDropdown() {
+    const query = document.getElementById('doctorSearch').value.toLowerCase();
+    const specFilter = document.getElementById('filterSpecialty').value;
+    const deptFilter = document.getElementById('filterDepartment').value;
+    
+    const items = document.querySelectorAll('.doctor-opt');
+    items.forEach(item => {
+        const searchTerms = item.getAttribute('data-search').toLowerCase();
+        const specialty = item.getAttribute('data-specialty');
+        const dept = item.getAttribute('data-dept');
+        
+        const matchesSearch = searchTerms.includes(query);
+        const matchesSpec = specFilter === "" || specialty === specFilter;
+        const matchesDept = deptFilter === "" || dept === deptFilter;
+        
+        item.style.display = (matchesSearch && matchesSpec && matchesDept) ? 'block' : 'none';
+    });
+}
+
+function selectDoctor(id, name, availableDays) {
+    document.getElementById('doctorId').value = id;
+    document.getElementById('doctorSearch').value = name;
+    toggleDropdown(false);
+    
+    // Original logic: Show schedule and check availability
+    showSchedule(id);
+    filterDoctorsByDate();
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.searchable-dropdown')) {
+        document.getElementById('doctorDropdownList').style.display = 'none';
+    }
+});
+
+function filterDoctorsByDate() {
+    const dtVal = document.getElementById('scheduledAt').value;
+    if (!dtVal) return;
+
+    const date = new Date(dtVal);
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const selectedDay = days[date.getDay()];
+
+    const doctorId = document.getElementById('doctorId').value;
+    const items = document.querySelectorAll('.doctor-opt');
+    let selectedStillValid = (doctorId === "");
+
+    items.forEach(item => {
+        const availableDays = item.getAttribute('data-available-days') || "";
+        if (availableDays.includes(selectedDay)) {
+            item.style.opacity = "1";
+            item.style.pointerEvents = "auto";
+            if (item.getAttribute('data-id') === doctorId) selectedStillValid = true;
+        } else {
+            item.style.opacity = "0.4";
+            if (item.getAttribute('data-id') === doctorId) { /* Invalid */ }
+        }
+    });
+
+    if (doctorId !== "" && !selectedStillValid) {
+        alert("Note: " + document.getElementById('doctorSearch').value + " is not scheduled to work on " + selectedDay + ". Please select another doctor or date.");
+        document.getElementById('doctorId').value = "";
+        document.getElementById('doctorSearch').value = "";
+        showSchedule("");
+    }
+}
+
 // Build schedule data from server-side model
 const scheduleMap = {};
 <c:forEach var="entry" items="${scheduleMap}">
@@ -202,8 +332,7 @@ function showSchedule(doctorId) {
 
     if (!doctorId) { panel.style.display = 'none'; return; }
 
-    const sel = document.getElementById('doctorId');
-    const doctorName = sel.options[sel.selectedIndex].text;
+    const doctorName = document.getElementById('doctorSearch').value;
     title.textContent = doctorName + " — Schedule";
     panel.style.display = 'block';
 

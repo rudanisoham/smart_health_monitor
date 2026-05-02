@@ -41,22 +41,36 @@ document.addEventListener("DOMContentLoaded", function () {
   const appRoot = document.querySelector(".admin-app");
   const toggleButtons = document.querySelectorAll("[data-sidebar-toggle]");
 
+  // Add mobile overlay if it doesn't exist
+  if (appRoot && !document.querySelector(".sidebar-overlay")) {
+    const overlay = document.createElement("div");
+    overlay.className = "sidebar-overlay";
+    appRoot.appendChild(overlay);
+    overlay.addEventListener("click", () => {
+      appRoot.classList.remove("mobile-sidebar-open");
+    });
+  }
+
   if (sidebar && appRoot && toggleButtons.length) {
     toggleButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const isCollapsed = sidebar.classList.toggle("collapsed");
-        appRoot.classList.toggle("sidebar-collapsed", isCollapsed);
-        try {
-          localStorage.setItem("adminSidebarCollapsed", isCollapsed ? "1" : "0");
-        } catch (e) {
-          // ignore
+        if (window.innerWidth <= 768) {
+          appRoot.classList.toggle("mobile-sidebar-open");
+        } else {
+          const isCollapsed = sidebar.classList.toggle("collapsed");
+          appRoot.classList.toggle("sidebar-collapsed", isCollapsed);
+          try {
+            localStorage.setItem("adminSidebarCollapsed", isCollapsed ? "1" : "0");
+          } catch (e) {
+            // ignore
+          }
         }
       });
     });
 
     try {
       const stored = localStorage.getItem("adminSidebarCollapsed");
-      if (stored === "1") {
+      if (stored === "1" && window.innerWidth > 768) {
         sidebar.classList.add("collapsed");
         appRoot.classList.add("sidebar-collapsed");
       }

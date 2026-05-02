@@ -94,7 +94,7 @@
         /* Medicine row layout */
         .med-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
+            grid-template-columns: 2fr 1fr auto 1fr 32px;
             gap: 0.5rem;
             margin-bottom: 0.5rem;
             align-items: start;
@@ -109,12 +109,58 @@
         .remove-btn:hover { background: #fef2f2; }
         .med-row-header {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
+            grid-template-columns: 2fr 1fr auto 1fr 32px;
             gap: 0.5rem; margin-bottom: 0.25rem;
         }
         .med-row-header span {
             font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
             text-transform: uppercase; letter-spacing: 0.05em; padding: 0 0.25rem;
+        }
+
+        /* Timing toggle buttons */
+        .timing-toggle-group {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+        }
+        .timing-toggle-btn {
+            padding: 0.45rem 0.6rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 6px;
+            background: #f8fafc;
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            line-height: 1;
+            user-select: none;
+        }
+        .timing-toggle-btn:hover {
+            border-color: #93c5fd;
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+        .timing-toggle-btn.active {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(29,78,216,0.3);
+        }
+        .timing-toggle-btn.active:hover {
+            background: #1e40af;
+            border-color: #1e40af;
+        }
+        .timing-code {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #64748b;
+            text-align: center;
+            margin-top: 0.2rem;
+            letter-spacing: 0.1em;
+            font-family: 'SF Mono', 'Consolas', monospace;
         }
     </style>
 </head>
@@ -397,10 +443,55 @@ function buildMedicineRow(isFirst) {
     pickerWrap.appendChild(dropdown);
     pickerWrap.appendChild(hiddenName);
 
-    // Dosage, Timing, Duration inputs
+    // Dosage, Duration inputs
     const dosageInput   = makeInput('dosage[]',   'Dosage (e.g. 500mg)');
-    const timingInput   = makeInput('timing[]',   'Timing (e.g. 1-0-1)');
     const durationInput = makeInput('duration[]', 'Duration (e.g. 5 days)');
+
+    // Hidden timing input (stores the value like "1-0-1")
+    const timingHidden = document.createElement('input');
+    timingHidden.type = 'hidden';
+    timingHidden.name = 'timing[]';
+    timingHidden.value = '0-0-0';
+
+    // Timing toggle buttons wrapper
+    const timingWrap = document.createElement('div');
+    timingWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+
+    const toggleGroup = document.createElement('div');
+    toggleGroup.className = 'timing-toggle-group';
+
+    const codeLabel = document.createElement('div');
+    codeLabel.className = 'timing-code';
+    codeLabel.textContent = '0-0-0';
+
+    const periods = ['M', 'A', 'N'];
+    const periodTitles = ['Morning', 'Afternoon', 'Night'];
+    const toggleBtns = [];
+
+    periods.forEach((label, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'timing-toggle-btn';
+        btn.textContent = label;
+        btn.title = periodTitles[idx];
+        btn.dataset.active = '0';
+        btn.addEventListener('click', () => {
+            const isActive = btn.dataset.active === '1';
+            btn.dataset.active = isActive ? '0' : '1';
+            btn.classList.toggle('active', !isActive);
+            // Recompute timing string
+            const vals = toggleBtns.map(b => b.dataset.active);
+            const code = vals.join('-');
+            timingHidden.value = code;
+            codeLabel.textContent = code;
+        });
+        toggleBtns.push(btn);
+        toggleGroup.appendChild(btn);
+    });
+
+    timingWrap.appendChild(toggleGroup);
+    timingWrap.appendChild(codeLabel);
+    timingWrap.appendChild(timingHidden);
 
     // Remove button
     const removeBtn = document.createElement('button');
@@ -413,7 +504,7 @@ function buildMedicineRow(isFirst) {
 
     row.appendChild(pickerWrap);
     row.appendChild(dosageInput);
-    row.appendChild(timingInput);
+    row.appendChild(timingWrap);
     row.appendChild(durationInput);
     row.appendChild(removeBtn);
 

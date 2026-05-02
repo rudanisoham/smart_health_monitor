@@ -223,7 +223,24 @@
                     </div>
                 </a>
             </div>
-            
+
+             <!-- Lab Staff Module -->
+            <div class="col-xl-4 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.35s;">
+                <a href="${pageContext.request.contextPath}/auth/lab/login" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 hover-up portal-mini-card p-4 d-flex flex-row align-items-center bg-white border-start border-4 border-danger">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 60px; height: 60px;">
+                            <i class="bi bi-droplet-half fs-3"></i>
+                        </div>
+                        <div class="ms-4">
+                            <h5 class="fw-bold text-dark mb-1">Lab Portal</h5>
+                            <p class="text-muted small mb-0 lh-tight">Diagnostics, tests & lab reports.</p>
+                        </div>
+                        <div class="ms-auto text-danger opacity-50 icon-arrow transition">
+                            <i class="bi bi-chevron-right fs-4"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
             <!-- Admin Module -->
             <div class="col-xl-4 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
                 <a href="${pageContext.request.contextPath}/auth/admin/login" class="text-decoration-none">

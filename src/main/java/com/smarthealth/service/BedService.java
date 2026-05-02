@@ -37,14 +37,30 @@ public class BedService {
         return bedRepository.save(bed);
     }
 
-    /** Assign a specific bed to a patient and sync department counters */
+    @Autowired private com.smarthealth.repository.jpa.BedStayRepository bedStayRepository;
+
     public boolean assignBed(Long bedId, Patient patient) {
         Bed bed = bedRepository.findById(bedId).orElse(null);
         if (bed == null || bed.getStatus() != Bed.BedStatus.AVAILABLE) return false;
 
+        // Auto-release any existing bed for this patient (Transfer/Upgrade/Downgrade)
+        List<Bed> existingBeds = bedRepository.findByPatientId(patient.getId());
+        for (Bed existingBed : existingBeds) {
+            releaseBed(existingBed.getId());
+        }
+
         bed.setPatient(patient);
         bed.setStatus(Bed.BedStatus.OCCUPIED);
+        bed.setAssignedAt(java.time.LocalDateTime.now());
         bedRepository.save(bed);
+
+        // Create stay record
+        com.smarthealth.model.BedStay stay = new com.smarthealth.model.BedStay();
+        stay.setPatient(patient);
+        stay.setBedNumber(bed.getBedNumber());
+        stay.setAssignedAt(bed.getAssignedAt());
+        stay.setDailyCharge(bed.getDailyCharge() != null ? bed.getDailyCharge() : 500.0);
+        bedStayRepository.save(stay);
 
         // Sync department counters
         Department dept = bed.getDepartment();
@@ -55,13 +71,42 @@ public class BedService {
         return true;
     }
 
+    public Bed findFirstAvailableByDepartment(Long deptId) {
+        return bedRepository.findByDepartmentId(deptId).stream()
+                .filter(b -> b.getStatus() == Bed.BedStatus.AVAILABLE)
+                .findFirst().orElse(null);
+    }
+
+    public long calculateStayDays(Bed bed) {
+        if (bed.getAssignedAt() == null) return 0;
+        java.time.Duration duration = java.time.Duration.between(bed.getAssignedAt(), java.time.LocalDateTime.now());
+        if (duration.isNegative() || duration.isZero()) return 0;
+        
+        long minutes = duration.toMinutes();
+        // Any part of a day counts as a full day
+        return (minutes / 1440) + 1;
+    }
+
+    public double calculateBedCharge(Bed bed) {
+        return calculateStayDays(bed) * (bed.getDailyCharge() != null ? bed.getDailyCharge() : 500.0);
+    }
+
     /** Release a bed and sync department counters */
     public boolean releaseBed(Long bedId) {
         Bed bed = bedRepository.findById(bedId).orElse(null);
         if (bed == null || bed.getStatus() != Bed.BedStatus.OCCUPIED) return false;
 
+        // Finalize stay record
+        com.smarthealth.model.BedStay stay = bedStayRepository.findFirstByPatientIdAndReleasedAtIsNull(bed.getPatient().getId()).orElse(null);
+        if (stay != null) {
+            stay.setReleasedAt(java.time.LocalDateTime.now());
+            stay.setFinalBill(calculateStayDaysForDates(stay.getAssignedAt(), stay.getReleasedAt()) * stay.getDailyCharge());
+            bedStayRepository.save(stay);
+        }
+
         bed.setPatient(null);
         bed.setStatus(Bed.BedStatus.AVAILABLE);
+        bed.setAssignedAt(null);
         bedRepository.save(bed);
 
         Department dept = bed.getDepartment();
@@ -70,6 +115,14 @@ public class BedService {
         if (dept.getCurrOccupancy() > 0) dept.setCurrOccupancy(dept.getCurrOccupancy() - 1);
         departmentRepository.save(dept);
         return true;
+    }
+
+    public long calculateStayDaysForDates(java.time.LocalDateTime start, java.time.LocalDateTime end) {
+        if (start == null || end == null) return 0;
+        java.time.Duration duration = java.time.Duration.between(start, end);
+        if (duration.isNegative() || duration.isZero()) return 0;
+        long minutes = duration.toMinutes();
+        return (minutes / 1440) + 1;
     }
 
     /** Auto-create beds for a department based on totalBeds and icuBeds */
@@ -81,12 +134,17 @@ public class BedService {
         int icu = dept.getIcuBeds() != null ? dept.getIcuBeds() : 0;
         int normal = total - icu;
 
+        // Get current rates
+        double currentNormal = bedRepository.findAll().stream().filter(b -> b.getType() == Bed.BedType.NORMAL).findFirst().map(Bed::getDailyCharge).orElse(500.0);
+        double currentIcu = bedRepository.findAll().stream().filter(b -> b.getType() == Bed.BedType.ICU).findFirst().map(Bed::getDailyCharge).orElse(1500.0);
+
         for (int i = 1; i <= normal; i++) {
             Bed b = new Bed();
             b.setDepartment(dept);
             b.setBedNumber(dept.getCode() + "-N" + String.format("%02d", i));
             b.setType(Bed.BedType.NORMAL);
             b.setStatus(Bed.BedStatus.AVAILABLE);
+            b.setDailyCharge(currentNormal);
             bedRepository.save(b);
         }
         for (int i = 1; i <= icu; i++) {
@@ -95,6 +153,7 @@ public class BedService {
             b.setBedNumber(dept.getCode() + "-ICU" + String.format("%02d", i));
             b.setType(Bed.BedType.ICU);
             b.setStatus(Bed.BedStatus.AVAILABLE);
+            b.setDailyCharge(currentIcu);
             bedRepository.save(b);
         }
 
@@ -117,6 +176,10 @@ public class BedService {
         long existingNormal = existing.stream().filter(b -> b.getType() == Bed.BedType.NORMAL).count();
         long existingIcu    = existing.stream().filter(b -> b.getType() == Bed.BedType.ICU).count();
 
+        // Get current rates
+        double currentNormal = bedRepository.findAll().stream().filter(b -> b.getType() == Bed.BedType.NORMAL).findFirst().map(Bed::getDailyCharge).orElse(500.0);
+        double currentIcu = bedRepository.findAll().stream().filter(b -> b.getType() == Bed.BedType.ICU).findFirst().map(Bed::getDailyCharge).orElse(1500.0);
+
         // Add missing NORMAL beds
         for (long i = existingNormal + 1; i <= targetNormal; i++) {
             Bed b = new Bed();
@@ -124,6 +187,7 @@ public class BedService {
             b.setBedNumber(dept.getCode() + "-N" + String.format("%02d", i));
             b.setType(Bed.BedType.NORMAL);
             b.setStatus(Bed.BedStatus.AVAILABLE);
+            b.setDailyCharge(currentNormal);
             bedRepository.save(b);
         }
         // Remove excess AVAILABLE NORMAL beds
@@ -142,6 +206,7 @@ public class BedService {
             b.setBedNumber(dept.getCode() + "-ICU" + String.format("%02d", i));
             b.setType(Bed.BedType.ICU);
             b.setStatus(Bed.BedStatus.AVAILABLE);
+            b.setDailyCharge(currentIcu);
             bedRepository.save(b);
         }
         // Remove excess AVAILABLE ICU beds
@@ -166,5 +231,14 @@ public class BedService {
     public long countAvailableInDepartment(Long deptId) {
         return bedRepository.findByDepartmentId(deptId).stream()
                 .filter(b -> b.getStatus() == Bed.BedStatus.AVAILABLE).count();
+    }
+
+    public void updateBedCharges(Bed.BedType type, Double charge) {
+        bedRepository.findAll().stream()
+                .filter(b -> b.getType() == type)
+                .forEach(b -> {
+                    b.setDailyCharge(charge);
+                    bedRepository.save(b);
+                });
     }
 }

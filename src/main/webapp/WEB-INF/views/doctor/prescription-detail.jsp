@@ -182,7 +182,19 @@
                                                 ${med.dosage}
                                             </span>
                                         </td>
-                                        <td>${med.timing}</td>
+                                        <td>
+                                            <c:set var="t" value="${med.timing}" />
+                                            <c:choose>
+                                                <c:when test="${t == '1-1-1'}"><span style="background:#fef3c7;color:#d97706;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;margin-right:2px;">☀ M</span><span style="background:#eff6ff;color:#3b82f6;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;margin-right:2px;">🌤 A</span><span style="background:#ede9fe;color:#7c3aed;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;">🌙 N</span></c:when>
+                                                <c:when test="${t == '1-0-1'}"><span style="background:#fef3c7;color:#d97706;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;margin-right:2px;">☀ M</span><span style="background:#ede9fe;color:#7c3aed;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;">🌙 N</span></c:when>
+                                                <c:when test="${t == '1-1-0'}"><span style="background:#fef3c7;color:#d97706;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;margin-right:2px;">☀ M</span><span style="background:#eff6ff;color:#3b82f6;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;">🌤 A</span></c:when>
+                                                <c:when test="${t == '0-1-1'}"><span style="background:#eff6ff;color:#3b82f6;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;margin-right:2px;">🌤 A</span><span style="background:#ede9fe;color:#7c3aed;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;">🌙 N</span></c:when>
+                                                <c:when test="${t == '1-0-0'}"><span style="background:#fef3c7;color:#d97706;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;">☀ Morning</span></c:when>
+                                                <c:when test="${t == '0-1-0'}"><span style="background:#eff6ff;color:#3b82f6;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;">🌤 Afternoon</span></c:when>
+                                                <c:when test="${t == '0-0-1'}"><span style="background:#ede9fe;color:#7c3aed;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.78rem;font-weight:700;">🌙 Night</span></c:when>
+                                                <c:otherwise>${med.timing}</c:otherwise>
+                                            </c:choose>
+                                        </td>
                                         <td>${med.duration}</td>
                                     </tr>
                                 </c:forEach>

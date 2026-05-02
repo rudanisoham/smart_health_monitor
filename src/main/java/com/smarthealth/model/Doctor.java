@@ -42,6 +42,9 @@ public class Doctor {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column
+    private String availableDays = "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday";
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -65,4 +68,6 @@ public class Doctor {
     public void setProfileImage(String profileImage) { this.profileImage = profileImage; }
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }
+    public String getAvailableDays() { return availableDays; }
+    public void setAvailableDays(String availableDays) { this.availableDays = availableDays; }
 }

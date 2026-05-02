@@ -25,15 +25,20 @@
                         <div class="section-title">All Patients</div>
                         <div class="section-subtitle">Registered patients and their current department</div>
                     </div>
-                    <div class="search-bar">
-                        <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                        <input type="text" placeholder="Search patients..." onkeyup="filterTable(this, 'patientTable')">
+                    <div style="display:flex; gap:1rem; align-items:center;">
+                        <div class="search-bar">
+                            <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                            <input type="text" placeholder="Search patients..." onkeyup="filterTable(this, 'patientTable')">
+                        </div>
+                        <button onclick="toggleBedFilter(this)" class="btn btn-outline btn-sm" style="height:2.5rem; white-space:nowrap;">
+                            🛏️ Assigned Only
+                        </button>
                     </div>
                 </div>
                 <div class="table-container mt-2">
                     <table id="patientTable">
                         <thead>
-                            <tr><th>Name</th><th>Contact</th><th>Blood Group</th><th>Department</th><th>Assigned Doctor</th></tr>
+                            <tr><th>Name</th><th>Contact</th><th>Bed Status</th><th>Department</th><th>Actions</th></tr>
                         </thead>
                         <tbody>
                         <c:choose>
@@ -45,18 +50,23 @@
                                             <div style="font-size:0.875rem;">${p.user.email}</div>
                                             <div class="muted" style="font-size:0.8rem;">${p.user.phone != null ? p.user.phone : '—'}</div>
                                         </td>
-                                        <td>${p.bloodGroup != null ? p.bloodGroup : '—'}</td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${p.department != null}"><span class="chip">${p.department.name}</span></c:when>
-                                                <c:otherwise><span class="muted">Not assigned</span></c:otherwise>
+                                                <c:when test="${not empty bedMap[p.id]}">
+                                                    <div style="font-weight:600; color:var(--primary);">${bedMap[p.id].bedNumber}</div>
+                                                    <div class="muted" style="font-size:0.75rem;">Occupied</div>
+                                                </c:when>
+                                                <c:otherwise><span class="muted">No Bed</span></c:otherwise>
                                             </c:choose>
                                         </td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${p.assignedDoctor != null}">Dr. ${p.assignedDoctor.user.fullName}</c:when>
-                                                <c:otherwise><span class="muted">—</span></c:otherwise>
+                                                <c:when test="${p.department != null}"><span class="chip">${p.department.name}</span></c:when>
+                                                <c:otherwise><span class="muted">N/A</span></c:otherwise>
                                             </c:choose>
+                                        </td>
+                                        <td>
+                                            <a href="${pageContext.request.contextPath}/reception/patient/${p.id}/billing" class="btn btn-outline btn-sm">Billing & Payments</a>
                                         </td>
                                     </tr>
                                 </c:forEach>
@@ -79,6 +89,31 @@ function filterTable(input, tableId) {
     let rows = document.getElementById(tableId).getElementsByTagName("tr");
     for (let i = 1; i < rows.length; i++) {
         rows[i].style.display = (rows[i].innerText || rows[i].textContent).toLowerCase().includes(filter) ? "" : "none";
+    }
+}
+
+let bedFilterActive = false;
+function toggleBedFilter(btn) {
+    bedFilterActive = !bedFilterActive;
+    const rows = document.getElementById('patientTable').getElementsByTagName("tr");
+    
+    if (bedFilterActive) {
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+        for (let i = 1; i < rows.length; i++) {
+            const bedCell = rows[i].getElementsByTagName("td")[2];
+            if (bedCell.innerText.includes('No Bed')) {
+                rows[i].style.display = "none";
+            } else {
+                rows[i].style.display = "";
+            }
+        }
+    } else {
+        btn.classList.add('btn-outline');
+        btn.classList.remove('btn-primary');
+        for (let i = 1; i < rows.length; i++) {
+            rows[i].style.display = "";
+        }
     }
 }
 </script>

@@ -2,6 +2,7 @@ package com.smarthealth.controller;
 
 import com.smarthealth.model.*;
 import com.smarthealth.service.*;
+import com.smarthealth.config.EnvConfig;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,6 +26,46 @@ public class DoctorController {
     @Autowired private MedicalReportService medicalReportService;
     @Autowired private EmailService emailService;
     @Autowired private MedicineService medicineService;
+    @Autowired private BedService bedService;
+    @Autowired private DepartmentService departmentService;
+
+    @PostMapping("/patient/{patientId}/assign-bed")
+    public String assignBedToPatient(@PathVariable Long patientId, HttpSession session, RedirectAttributes ra) {
+        Doctor doctor = getSessionDoctor(session);
+        if (doctor == null || !doctor.isApproved()) {
+            ra.addFlashAttribute("error", "Action denied.");
+            return "redirect:/doctor/dashboard";
+        }
+
+        Patient patient = patientService.findById(patientId).orElse(null);
+        if (patient == null) {
+            ra.addFlashAttribute("error", "Patient not found.");
+            return "redirect:/doctor/patients";
+        }
+
+        // Find available bed in doctor's department
+        if (doctor.getDepartment() == null) {
+            ra.addFlashAttribute("error", "Your department is not set. Please contact admin.");
+            return "redirect:/doctor/patient/" + patientId;
+        }
+
+        Bed availableBed = bedService.findFirstAvailableByDepartment(doctor.getDepartment().getId());
+        if (availableBed == null) {
+            ra.addFlashAttribute("error", "No available beds in your department.");
+            return "redirect:/doctor/patient/" + patientId;
+        }
+
+        boolean success = bedService.assignBed(availableBed.getId(), patient);
+        if (success) {
+            notificationService.send(patient.getUser().getId(), "PATIENT", "Bed Assigned", 
+                "Dr. " + doctor.getUser().getFullName() + " has assigned you bed " + availableBed.getBedNumber() + " in " + doctor.getDepartment().getName() + " department.", "DANGER");
+            ra.addFlashAttribute("success", "Bed " + availableBed.getBedNumber() + " assigned to " + patient.getUser().getFullName() + ".");
+        } else {
+            ra.addFlashAttribute("error", "Failed to assign bed.");
+        }
+
+        return "redirect:/doctor/patient/" + patientId;
+    }
 
     private Doctor getSessionDoctor(HttpSession session) {
         User user = (User) session.getAttribute("sessionUser");
@@ -34,54 +75,66 @@ public class DoctorController {
                 .findFirst().orElse(null);
     }
 
+    @GetMapping("/pending-approval")
+    public String pendingApproval(HttpSession session, Model model) {
+        Doctor doctor = getSessionDoctor(session);
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (doctor.isApproved()) return "redirect:/doctor/dashboard";
+        model.addAttribute("doctor", doctor);
+        return "doctor/pending-approval";
+    }
+
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(HttpSession session, Model model) {
         Doctor doctor = getSessionDoctor(session);
-        if (doctor != null) {
-            model.addAttribute("doctor", doctor);
-            java.util.List<com.smarthealth.model.Appointment> appts = appointmentService.findByDoctorId(doctor.getId());
-            model.addAttribute("appointments", appts);
-            model.addAttribute("appointmentCount", appointmentService.countByDoctorId(doctor.getId()));
-            model.addAttribute("todayCount", appointmentService.countTodayByDoctorId(doctor.getId()));
-            model.addAttribute("unreadCount", notificationService.countUnread(doctor.getUser().getId()));
-            // Unique recent patients (last 5 distinct)
-            java.util.List<com.smarthealth.model.Patient> recentPatients = appts.stream()
-                .map(com.smarthealth.model.Appointment::getPatient)
-                .filter(p -> p != null)
-                .collect(java.util.stream.Collectors.collectingAndThen(
-                    java.util.stream.Collectors.toMap(
-                        com.smarthealth.model.Patient::getId, p -> p, (a, b) -> a,
-                        java.util.LinkedHashMap::new),
-                    m -> new java.util.ArrayList<>(m.values())))
-                .stream().limit(5).toList();
-            model.addAttribute("recentPatients", recentPatients);
-        }
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
+        
+        model.addAttribute("doctor", doctor);
+        java.util.List<com.smarthealth.model.Appointment> appts = appointmentService.findByDoctorId(doctor.getId());
+        model.addAttribute("appointments", appts);
+        model.addAttribute("appointmentCount", appointmentService.countByDoctorId(doctor.getId()));
+        model.addAttribute("todayCount", appointmentService.countTodayByDoctorId(doctor.getId()));
+        model.addAttribute("unreadCount", notificationService.countUnread(doctor.getUser().getId()));
+        // Unique recent patients (last 5 distinct)
+        java.util.List<com.smarthealth.model.Patient> recentPatients = appts.stream()
+            .map(com.smarthealth.model.Appointment::getPatient)
+            .filter(p -> p != null)
+            .collect(java.util.stream.Collectors.collectingAndThen(
+                java.util.stream.Collectors.toMap(
+                    com.smarthealth.model.Patient::getId, p -> p, (a, b) -> a,
+                    java.util.LinkedHashMap::new),
+                m -> new java.util.ArrayList<>(m.values())))
+            .stream().limit(5).toList();
+        model.addAttribute("recentPatients", recentPatients);
         return "doctor/dashboard";
     }
 
     @GetMapping("/patients")
     public String patients(HttpSession session, Model model) {
         Doctor doctor = getSessionDoctor(session);
-        if (doctor != null) {
-            model.addAttribute("doctor", doctor);
-            // Deduplicate: one row per unique patient
-            java.util.List<com.smarthealth.model.Appointment> appts = appointmentService.findByDoctorId(doctor.getId());
-            java.util.Map<Long, com.smarthealth.model.Appointment> uniqueMap = new java.util.LinkedHashMap<>();
-            for (com.smarthealth.model.Appointment a : appts) {
-                if (a.getPatient() != null) uniqueMap.putIfAbsent(a.getPatient().getId(), a);
-            }
-            model.addAttribute("uniquePatients", new java.util.ArrayList<>(uniqueMap.values()));
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
+        
+        model.addAttribute("doctor", doctor);
+        // Deduplicate: one row per unique patient
+        java.util.List<com.smarthealth.model.Appointment> appts = appointmentService.findByDoctorId(doctor.getId());
+        java.util.Map<Long, com.smarthealth.model.Appointment> uniqueMap = new java.util.LinkedHashMap<>();
+        for (com.smarthealth.model.Appointment a : appts) {
+            if (a.getPatient() != null) uniqueMap.putIfAbsent(a.getPatient().getId(), a);
         }
+        model.addAttribute("uniquePatients", new java.util.ArrayList<>(uniqueMap.values()));
         return "doctor/patient-list";
     }
 
     @GetMapping("/appointments")
     public String appointments(HttpSession session, Model model) {
         Doctor doctor = getSessionDoctor(session);
-        if (doctor != null) {
-            model.addAttribute("doctor", doctor);
-            model.addAttribute("appointments", appointmentService.findByDoctorId(doctor.getId()));
-        }
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
+        
+        model.addAttribute("doctor", doctor);
+        model.addAttribute("appointments", appointmentService.findByDoctorId(doctor.getId()));
         return "doctor/appointments";
     }
 
@@ -93,7 +146,7 @@ public class DoctorController {
         
         appointmentService.findById(id).ifPresent(appt -> {
             try {
-                String reviewLink = "http://localhost:8080" + session.getServletContext().getContextPath() + "/patient/reviews/new?appointmentId=" + id;
+                String reviewLink = EnvConfig.get("APP_URL", "http://localhost:8080/smart_health_monitor") + "/patient/reviews/new?appointmentId=" + id;
                 String body = "Dear " + appt.getPatient().getUser().getFullName() + ",\n\n" +
                               "We hope your recent appointment with Dr. " + doctor.getUser().getFullName() + " went well.\n\n" +
                               "Please take a moment to review your experience by clicking the link below:\n" +
@@ -136,12 +189,13 @@ public class DoctorController {
     @GetMapping("/prescriptions")
     public String prescriptions(HttpSession session, Model model) {
         Doctor doctor = getSessionDoctor(session);
-        if (doctor != null) {
-            model.addAttribute("doctor", doctor);
-            model.addAttribute("prescriptions", prescriptionService.findByDoctorId(doctor.getId()));
-            model.addAttribute("patients", patientService.findAll());
-            model.addAttribute("medicines", medicineService.findAll());
-        }
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
+        
+        model.addAttribute("doctor", doctor);
+        model.addAttribute("prescriptions", prescriptionService.findByDoctorId(doctor.getId()));
+        model.addAttribute("patients", patientService.findAll());
+        model.addAttribute("medicines", medicineService.findAll());
         return "doctor/prescriptions";
     }
 
@@ -209,6 +263,53 @@ public class DoctorController {
         return "redirect:/doctor/prescriptions";
     }
 
+    @Autowired private com.smarthealth.service.LabService labService;
+
+    @GetMapping("/lab-requests")
+    public String labRequests(HttpSession session, Model model) {
+        Doctor doctor = getSessionDoctor(session);
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
+        
+        model.addAttribute("doctor", doctor);
+        model.addAttribute("labRequests", labService.findActiveRequestsByDoctor(doctor.getId()));
+        model.addAttribute("patients", patientService.findAll());
+        model.addAttribute("labTests", labService.findAllActiveTests());
+        return "doctor/lab-requests";
+    }
+
+    @PostMapping("/lab-requests/create")
+    public String createLabRequest(@RequestParam Long patientId,
+                                   @RequestParam("labTestId") java.util.List<Long> labTestIds,
+                                   @RequestParam(required = false) String doctorNotes,
+                                   HttpSession session, RedirectAttributes ra) {
+        Doctor doctor = getSessionDoctor(session);
+        if (doctor == null || !doctor.isApproved()) { ra.addFlashAttribute("error", "Action denied."); return "redirect:/doctor/dashboard"; }
+        
+        Patient patient = patientService.findById(patientId).orElse(null);
+        if (patient != null && labTestIds != null && !labTestIds.isEmpty()) {
+            String groupId = java.util.UUID.randomUUID().toString();
+            int count = 0;
+            for (Long testId : labTestIds) {
+                com.smarthealth.model.LabTest labTest = labService.findTestById(testId).orElse(null);
+                if (labTest != null) {
+                    com.smarthealth.model.LabRequest req = new com.smarthealth.model.LabRequest();
+                    req.setPatient(patient);
+                    req.setDoctor(doctor);
+                    req.setLabTest(labTest);
+                    req.setDoctorNotes(doctorNotes);
+                    req.setGroupId(groupId);
+                    labService.saveRequest(req);
+                    count++;
+                }
+            }
+            ra.addFlashAttribute("success", count + " lab requests submitted successfully for " + patient.getUser().getFullName() + ".");
+        } else {
+            ra.addFlashAttribute("error", "Invalid patient or lab test selection.");
+        }
+        return "redirect:/doctor/lab-requests";
+    }
+
     @GetMapping("/alerts")
     public String alerts(HttpSession session, Model model) {
         User user = (User) session.getAttribute("sessionUser");
@@ -255,8 +356,30 @@ public class DoctorController {
 
     @GetMapping("/settings")
     public String settings(HttpSession session, Model model) {
-        model.addAttribute("user", session.getAttribute("sessionUser"));
+        User user = (User) session.getAttribute("sessionUser");
+        if (user == null) return "redirect:/auth/doctor/login";
+        Doctor doctor = doctorService.findByUserId(user.getId());
+        model.addAttribute("doctor", doctor);
+        model.addAttribute("user", user);
         return "doctor/settings";
+    }
+
+    @PostMapping("/settings/availability")
+    public String updateAvailability(@RequestParam(value="days[]", required=false) String[] days,
+                                     HttpSession session, RedirectAttributes ra) {
+        User user = (User) session.getAttribute("sessionUser");
+        if (user == null) return "redirect:/auth/doctor/login";
+        Doctor doctor = doctorService.findByUserId(user.getId());
+        if (doctor != null) {
+            if (days != null && days.length > 0) {
+                doctor.setAvailableDays(String.join(",", days));
+            } else {
+                doctor.setAvailableDays(""); // No days selected
+            }
+            doctorService.save(doctor);
+            ra.addFlashAttribute("success", "Availability schedule updated.");
+        }
+        return "redirect:/doctor/settings";
     }
 
     @PostMapping("/settings/update")
@@ -276,6 +399,19 @@ public class DoctorController {
         return "redirect:/doctor/settings";
     }
 
+    @GetMapping("/lab-group/{groupId}")
+    public String viewLabGroupDetail(@PathVariable String groupId, HttpSession session, Model model) {
+        if (getSessionDoctor(session) == null) return "redirect:/auth/doctor/login";
+        
+        java.util.List<LabRequest> group = labService.findByGroupId(groupId);
+        if (group.isEmpty()) return "redirect:/doctor/dashboard";
+        
+        model.addAttribute("group", group);
+        model.addAttribute("first", group.get(0));
+        model.addAttribute("userType", "DOCTOR");
+        return "lab/group-detail";
+    }
+
     @GetMapping("/patient/{id}")
     public String patientDetail(@PathVariable Long id, Model model) {
         model.addAttribute("patient", patientService.findById(id).orElse(null));
@@ -283,6 +419,15 @@ public class DoctorController {
         model.addAttribute("appointments", appointmentService.findByPatientId(id));
         model.addAttribute("metrics", healthMetricService.findByPatientId(id));
         model.addAttribute("reports", medicalReportService.findByPatientId(id));
+        
+        java.util.List<LabRequest> reqs = labService.findRequestsByPatient(id);
+        java.util.Map<String, java.util.List<LabRequest>> grouped = reqs.stream()
+            .collect(java.util.stream.Collectors.groupingBy(
+                r -> r.getGroupId() != null ? r.getGroupId() : "single-" + r.getId(),
+                java.util.LinkedHashMap::new,
+                java.util.stream.Collectors.toList()
+            ));
+        model.addAttribute("groupedLabRequests", grouped);
         return "doctor/patient-details";
     }
 
@@ -290,6 +435,7 @@ public class DoctorController {
     public String viewReport(@PathVariable Long id, HttpSession session, Model model) {
         Doctor doctor = getSessionDoctor(session);
         if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
         
         MedicalReport report = medicalReportService.findById(id).orElse(null);
         if (report != null) {
@@ -333,6 +479,10 @@ public class DoctorController {
 
     @GetMapping("/diagnosis/add")
     public String addDiagnosis(HttpSession session, Model model) {
+        Doctor doctor = getSessionDoctor(session);
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
+        
         model.addAttribute("patients", patientService.findAll());
         return "doctor/add-diagnosis";
     }
@@ -347,10 +497,33 @@ public class DoctorController {
     @GetMapping("/prescriptions/{id}")
     public String prescriptionDetail(@PathVariable Long id, HttpSession session, Model model, RedirectAttributes ra) {
         Doctor doctor = getSessionDoctor(session);
+        if (doctor == null) return "redirect:/auth/doctor/login";
+        if (!doctor.isApproved()) return "redirect:/doctor/pending-approval";
+        
         Prescription rx = prescriptionService.findById(id).orElse(null);
         if (rx == null) { ra.addFlashAttribute("error", "Prescription not found."); return "redirect:/doctor/prescriptions"; }
         model.addAttribute("prescription", rx);
         model.addAttribute("doctor", doctor);
         return "doctor/prescription-detail";
+    }
+
+    /** API for availability filtering */
+    @GetMapping("/api/available")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getAvailableDoctors(@RequestParam String date) {
+        try {
+            java.time.LocalDate ld = java.time.LocalDate.parse(date);
+            String dayOfWeek = ld.getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+            
+            return doctorService.findAvailable(dayOfWeek).stream().map(d -> {
+                java.util.Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", d.getId());
+                map.put("fullName", d.getUser().getFullName());
+                map.put("specialty", d.getSpecialty());
+                return map;
+            }).collect(java.util.stream.Collectors.toList());
+        } catch (Exception e) {
+            return new java.util.ArrayList<>();
+        }
     }
 }

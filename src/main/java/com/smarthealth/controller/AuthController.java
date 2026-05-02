@@ -38,6 +38,12 @@ public class AuthController {
     @GetMapping("/medical/login")
     public String medicalLogin() { return "auth/medical-login"; }
 
+    @GetMapping("/lab/login")
+    public String labLogin() { return "auth/lab-login"; }
+
+    @GetMapping({"/lab_staff/login"})
+    public String labLoginAlt() { return "auth/lab-login"; }
+
     @GetMapping("/patient/register")
     public String patientRegister(Model model) { return "auth/patient-register"; }
 
@@ -69,10 +75,6 @@ public class AuthController {
         if (user.getRole() == Role.DOCTOR) {
             Doctor doctor = doctorService.findByUserId(user.getId());
             if (doctor != null) {
-                if (!doctor.isApproved()) {
-                    ra.addFlashAttribute("error", "Your account is awaiting registration approval. Please wait for an administrator to activate your profile.");
-                    return "redirect:/auth/doctor/login";
-                }
                 if ("INACTIVE".equalsIgnoreCase(doctor.getStatus())) {
                     ra.addFlashAttribute("error", "Your account is currently inactive. Please contact the administrator for more information.");
                     return "redirect:/auth/doctor/login";
@@ -92,6 +94,7 @@ public class AuthController {
             case PATIENT:      return "redirect:/patient/dashboard";
             case RECEPTIONIST: return "redirect:/reception/dashboard";
             case MEDICAL_STAFF: return "redirect:/medical/dashboard";
+            case LAB_STAFF:    return "redirect:/lab/dashboard";
             default:           return "redirect:/";
         }
     }
@@ -145,16 +148,19 @@ public class AuthController {
             ra.addFlashAttribute("error", "Email already registered.");
             return "redirect:/auth/doctor/register";
         }
+        if (doctorService.existsByLicenseNumber(licenseNumber)) {
+            ra.addFlashAttribute("error", "License number already registered.");
+            return "redirect:/auth/doctor/register";
+        }
         User user = new User();
         user.setFullName(fullName);
         user.setEmail(email);
         user.setPassword(password);
         user.setRole(Role.DOCTOR);
         user.setPhone(phone);
-        User saved = userService.register(user);
+        // userService.register(user) is now called inside doctorService.registerDoctor
 
         Doctor doctor = new Doctor();
-        doctor.setUser(saved);
         doctor.setSpecialty(specialty);
         doctor.setLicenseNumber(licenseNumber);
         doctor.setPhone(phone);
@@ -163,7 +169,9 @@ public class AuthController {
             departmentService.findById(departmentId).ifPresent(doctor::setDepartment);
         }
         doctor.setApproved(false);
-        doctorService.save(doctor);
+        
+        // Transactional save for both User and Doctor
+        doctorService.registerDoctor(user, doctor);
 
         logService.info("New doctor registration request: " + email, fullName);
         ra.addFlashAttribute("success", "Registration submitted! Await admin approval.");

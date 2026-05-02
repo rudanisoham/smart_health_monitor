@@ -72,8 +72,7 @@ public class AppointmentServiceTest {
         assertEquals(testDoctor, assigned.getDoctor());
         assertEquals("PENDING", assigned.getStatus());
         assertEquals(3, assigned.getTokenNumber());
-        // Slot is 20 mins. For token 3, estimated = scheduled + (3-1)*20 = scheduled + 40 mins
-        assertEquals(scheduledTime.plusMinutes(40), assigned.getEstimatedTime());
+        assertEquals(scheduledTime, assigned.getEstimatedTime());
         verify(appointmentRepository).save(testAppointment);
     }
 

@@ -23,9 +23,9 @@ public class JpaConfig {
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-        dataSource.setUrl("jdbc:mysql://localhost:3306/smart_health_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true");
-        dataSource.setUsername("root");
-        dataSource.setPassword("");
+        dataSource.setUrl(EnvConfig.get("DB_URL", "jdbc:mysql://localhost:3306/smart_health_db"));
+        dataSource.setUsername(EnvConfig.get("DB_USERNAME", "root"));
+        dataSource.setPassword(EnvConfig.get("DB_PASSWORD", ""));
         return dataSource;
     }
 

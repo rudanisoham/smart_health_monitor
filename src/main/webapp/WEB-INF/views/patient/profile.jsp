@@ -75,9 +75,9 @@
                                       placeholder="Your current address"><c:if test="${patient != null}">${patient.address}</c:if></textarea>
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <div class="flex justify-between items-center">
-                                <span class="text-xs text-muted">Email: <strong>${patient != null ? patient.user.email : ''}</strong> (cannot be changed)</span>
-                                <button class="btn btn-primary btn-sm" type="submit">Save Profile</button>
+                            <div class="flex justify-between items-center flex-mobile-stack">
+                                <span class="text-xs text-muted">Email: <strong>${patient != null ? patient.user.email : ''}</strong><br>(cannot be changed)</span>
+                                <button class="btn btn-primary btn-sm w-mobile-full" type="submit">Save Profile</button>
                             </div>
                         </div>
                     </form>

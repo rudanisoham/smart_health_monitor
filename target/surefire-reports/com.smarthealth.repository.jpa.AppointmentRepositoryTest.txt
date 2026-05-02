@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.smarthealth.repository.jpa.AppointmentRepositoryTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.518 s -- in com.smarthealth.repository.jpa.AppointmentRepositoryTest

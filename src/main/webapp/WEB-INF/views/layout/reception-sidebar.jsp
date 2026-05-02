@@ -1,4 +1,3 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <aside class="admin-sidebar">
     <div class="sidebar-logo">
         <div class="sidebar-logo-icon">SH</div>

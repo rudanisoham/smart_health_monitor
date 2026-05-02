@@ -37,12 +37,12 @@ public class AppointmentRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        User u1 = new User(); u1.setEmail("doc@test.com"); u1.setRole(Role.DOCTOR); u1.setPassword("p");
+        User u1 = new User(); u1.setEmail("doc@test.com"); u1.setRole(Role.DOCTOR); u1.setPassword("password123"); u1.setFullName("Dr Test");
         userRepository.save(u1);
-        testDoctor = new Doctor(); testDoctor.setUser(u1); testDoctor.setLicenseNumber("123");
+        testDoctor = new Doctor(); testDoctor.setUser(u1); testDoctor.setLicenseNumber("123"); testDoctor.setSpecialty("Cardiology");
         doctorRepository.save(testDoctor);
 
-        User u2 = new User(); u2.setEmail("pat@test.com"); u2.setRole(Role.PATIENT); u2.setPassword("p");
+        User u2 = new User(); u2.setEmail("pat@test.com"); u2.setRole(Role.PATIENT); u2.setPassword("password123"); u2.setFullName("Patient Test");
         userRepository.save(u2);
         testPatient = new Patient(); testPatient.setUser(u2);
         patientRepository.save(testPatient);
@@ -77,9 +77,9 @@ public class AppointmentRepositoryTest {
     }
 
     @Test
-    void shouldReturnNullMaxTokenIfNoAppointments() {
+    void shouldReturnZeroMaxTokenIfNoAppointments() {
         LocalDateTime now = LocalDateTime.now();
         Integer maxToken = appointmentRepository.maxTokenByDoctorAndDate(testDoctor.getId(), now.toLocalDate().atStartOfDay(), now.toLocalDate().atTime(23, 59, 59));
-        assertNull(maxToken);
+        assertEquals(0, maxToken);
     }
 }

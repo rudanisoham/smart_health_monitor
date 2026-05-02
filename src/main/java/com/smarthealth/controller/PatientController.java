@@ -2,6 +2,8 @@ package com.smarthealth.controller;
 
 import com.smarthealth.model.*;
 import com.smarthealth.model.mongo.HealthMetric;
+import com.smarthealth.repository.jpa.BedRepository;
+import com.smarthealth.repository.jpa.PaymentRepository;
 import com.smarthealth.service.*;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,112 @@ public class PatientController {
     @Autowired private SystemLogService systemLogService;
     @Autowired private DoctorReviewService reviewService;
     @Autowired private EmailService emailService;
+    @Autowired private DepartmentService departmentService;
+    @Autowired private PaymentService paymentService;
+    @Autowired private PaymentRepository paymentRepository;
+    @Autowired private BedService bedService;
+    @Autowired private BedRepository bedRepository;
+
+    @GetMapping("/billing")
+    public String billing(HttpSession session, Model model) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+
+        java.util.Map<String, Object> summary = paymentService.getBillingSummary(patient.getId());
+        model.addAllAttributes(summary);
+        model.addAttribute("patient", patient);
+        
+        return "patient/billing";
+    }
+
+    @PostMapping("/billing/pay-all")
+    @ResponseBody
+    public java.util.Map<String, Object> initiateTotalPayment(HttpSession session) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        Patient patient = getSessionPatient(session);
+        if (patient == null) { response.put("error", "Session expired"); return response; }
+
+        java.util.Map<String, Object> summary = paymentService.getBillingSummary(patient.getId());
+        double balance = (double) summary.get("balance");
+
+        if (balance <= 0) {
+            response.put("error", "No outstanding balance found.");
+            return response;
+        }
+
+        try {
+            Payment p = paymentService.createRazorpayOrder(patient, balance, "TOTAL_DUES", "Unified Settlement (Bed + Diagnostics)");
+            response.put("orderId", p.getRazorpayOrderId());
+            response.put("amount", (int)(p.getAmount() * 100));
+            response.put("key", com.smarthealth.config.EnvConfig.get("RAZORPAY_KEY_ID"));
+            response.put("name", "Smart Health Monitor");
+            response.put("description", p.getDescription());
+            response.put("user_name", patient.getUser().getFullName());
+            response.put("user_email", patient.getUser().getEmail());
+            response.put("user_phone", patient.getUser().getPhone());
+        } catch (Exception e) {
+            response.put("error", "Payment initiation failed: " + e.getMessage());
+        }
+        return response;
+    }
+
+    @PostMapping("/billing/pay-diagnostic/{paymentId}")
+    @ResponseBody
+    public java.util.Map<String, Object> initiateDiagnosticPayment(@PathVariable Long paymentId, HttpSession session) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        Patient patient = getSessionPatient(session);
+        if (patient == null) { response.put("error", "Session expired"); return response; }
+
+        Payment p = paymentRepository.findById(paymentId).orElse(null);
+        if (p == null || !p.getPatient().getId().equals(patient.getId()) || !"PENDING".equals(p.getStatus())) {
+            response.put("error", "Invalid or already processed payment.");
+            return response;
+        }
+
+        try {
+            // Update the existing payment with Razorpay Order ID
+            com.razorpay.RazorpayClient client = new com.razorpay.RazorpayClient(
+                com.smarthealth.config.EnvConfig.get("RAZORPAY_KEY_ID"), 
+                com.smarthealth.config.EnvConfig.get("RAZORPAY_KEY_SECRET")
+            );
+            
+            org.json.JSONObject orderRequest = new org.json.JSONObject();
+            orderRequest.put("amount", (int)(p.getAmount() * 100));
+            orderRequest.put("currency", "INR");
+            orderRequest.put("receipt", "lab_" + p.getId());
+            
+            com.razorpay.Order order = client.orders.create(orderRequest);
+            p.setRazorpayOrderId(order.get("id"));
+            p.setMethod("RAZORPAY");
+            paymentRepository.save(p);
+
+            response.put("orderId", p.getRazorpayOrderId());
+            response.put("amount", (int)(p.getAmount() * 100));
+            response.put("key", com.smarthealth.config.EnvConfig.get("RAZORPAY_KEY_ID"));
+            response.put("name", "Smart Health Monitor");
+            response.put("description", p.getDescription());
+            response.put("user_name", patient.getUser().getFullName());
+            response.put("user_email", patient.getUser().getEmail());
+            response.put("user_phone", patient.getUser().getPhone());
+        } catch (Exception e) {
+            response.put("error", "Payment initiation failed: " + e.getMessage());
+        }
+        return response;
+    }
+
+    @PostMapping("/billing/verify")
+    public String verifyPayment(@RequestParam String razorpay_order_id,
+                                @RequestParam String razorpay_payment_id,
+                                @RequestParam String razorpay_signature,
+                                HttpSession session, RedirectAttributes ra) {
+        Payment p = paymentService.verifyAndCompletePayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+        if (p != null) {
+            ra.addFlashAttribute("success", "Payment successful! Reference ID: " + razorpay_payment_id);
+        } else {
+            ra.addFlashAttribute("error", "Payment verification failed.");
+        }
+        return "redirect:/patient/billing";
+    }
 
     @Autowired private AIService aiService;
 
@@ -114,6 +222,15 @@ public class PatientController {
             // AI Hint for dashboard
             if (latest != null) {
                 model.addAttribute("aiInsight", aiService.getQuickInsight(latest));
+            }
+
+            // Bed Info
+            List<com.smarthealth.model.Bed> beds = bedRepository.findByPatientId(patient.getId());
+            com.smarthealth.model.Bed currentBed = beds.isEmpty() ? null : beds.get(0);
+            if (currentBed != null) {
+                model.addAttribute("currentBed", currentBed);
+                model.addAttribute("stayDays", bedService.calculateStayDays(currentBed));
+                model.addAttribute("totalDue", bedService.calculateBedCharge(currentBed));
             }
         }
         return "patient/dashboard";
@@ -283,7 +400,9 @@ public class PatientController {
             model.addAttribute("patient", patient);
             model.addAttribute("appointments", appointmentService.findByPatientId(patient.getId()));
             
-            List<Doctor> doctors = doctorService.findApproved();
+            List<Doctor> doctors = doctorService.findApproved().stream()
+                .filter(d -> "ACTIVE".equals(d.getStatus()))
+                .collect(java.util.stream.Collectors.toList());
             model.addAttribute("doctors", doctors);
             
             Map<Long, Double> ratings = new java.util.HashMap<>();
@@ -292,6 +411,8 @@ public class PatientController {
                 ratings.put(d.getId(), avg != null ? avg : 0.0);
             }
             model.addAttribute("ratings", ratings);
+            model.addAttribute("departments", departmentService.findAll());
+            model.addAttribute("specialties", doctorService.findDistinctSpecialties());
         }
         return "patient/appointments";
     }
@@ -399,73 +520,37 @@ public class PatientController {
         return "patient/prescription-detail";
     }
 
+    @Autowired private com.smarthealth.service.LabService labService;
+
+    @GetMapping("/lab-group/{groupId}")
+    public String viewLabGroupDetail(@PathVariable String groupId, HttpSession session, Model model) {
+        if (getSessionPatient(session) == null) return "redirect:/auth/patient/login";
+        
+        java.util.List<LabRequest> group = labService.findByGroupId(groupId);
+        if (group.isEmpty()) return "redirect:/patient/reports";
+        
+        model.addAttribute("group", group);
+        model.addAttribute("first", group.get(0));
+        model.addAttribute("userType", "PATIENT");
+        return "lab/group-detail";
+    }
+
     @GetMapping("/reports")
     public String reports(HttpSession session, Model model) {
         Patient patient = getSessionPatient(session);
         if (patient != null) {
             model.addAttribute("patient", patient);
-            model.addAttribute("reports", medicalReportService.findByPatientId(patient.getId()));
+            
+            java.util.List<LabRequest> reqs = labService.findRequestsByPatient(patient.getId());
+            java.util.Map<String, java.util.List<LabRequest>> grouped = reqs.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                    r -> r.getGroupId() != null ? r.getGroupId() : "single-" + r.getId(),
+                    java.util.LinkedHashMap::new,
+                    java.util.stream.Collectors.toList()
+                ));
+            model.addAttribute("groupedLabRequests", grouped);
         }
         return "patient/reports";
-    }
-
-    @GetMapping("/reports/{id}")
-    public String reportDetails(@PathVariable Long id, HttpSession session, Model model) {
-        Patient patient = getSessionPatient(session);
-        if (patient == null) return "redirect:/auth/patient/login";
-        
-        MedicalReport report = medicalReportService.findById(id).orElse(null);
-        if (report != null && report.getPatient().getId().equals(patient.getId())) {
-            model.addAttribute("report", report);
-        }
-        return "patient/report-details";
-    }
-
-    @PostMapping("/reports/add")
-    public String addReport(@RequestParam String title,
-                            @RequestParam String type,
-                            @RequestParam(required = false) String description,
-                            @RequestParam String results,
-                            @RequestParam(required = false) MultipartFile reportFile,
-                            HttpSession session, RedirectAttributes ra) {
-        Patient patient = getSessionPatient(session);
-        if (patient == null) return "redirect:/auth/patient/login";
-        
-        try {
-            MedicalReport report = new MedicalReport();
-            report.setPatient(patient);
-            report.setTitle(title);
-            try {
-                report.setType(MedicalReport.ReportType.valueOf(type));
-            } catch (Exception e) {
-                report.setType(MedicalReport.ReportType.OTHER);
-            }
-            report.setStatus(MedicalReport.ReportStatus.PENDING);
-            report.setDescription(description);
-            report.setResults(results);
-
-            if (reportFile != null && !reportFile.isEmpty()) {
-                String uploadDir = session.getServletContext().getRealPath("/") + "uploads/reports/";
-                File dir = new File(uploadDir);
-                if (!dir.exists()) dir.mkdirs();
-
-                String fileName = UUID.randomUUID().toString() + "_" + reportFile.getOriginalFilename();
-                Path path = Paths.get(uploadDir + fileName);
-                Files.write(path, reportFile.getBytes());
-                report.setFilePath("/uploads/reports/" + fileName);
-            }
-            
-            medicalReportService.save(report);
-            ra.addFlashAttribute("success", "Medical report added successfully.");
-        } catch (IOException e) {
-            e.printStackTrace();
-            ra.addFlashAttribute("error", "Failed to upload file: " + e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
-            ra.addFlashAttribute("error", "Error saving report: " + e.getMessage());
-        }
-        
-        return "redirect:/patient/reports";
     }
 
     @GetMapping("/notifications")
@@ -538,6 +623,92 @@ public class PatientController {
             }
         }
         return "redirect:/patient/settings";
+    }
+
+    @Autowired private com.smarthealth.repository.jpa.ReminderRepository reminderRepository;
+
+    @GetMapping("/reminders")
+    public String reminders(HttpSession session, Model model) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+        
+        model.addAttribute("patient", patient);
+        model.addAttribute("customReminders", reminderRepository.findByPatientAndIsActive(patient, true));
+        
+        List<Prescription> allPrescriptions = prescriptionService.findByPatientId(patient.getId());
+        List<Prescription> activeRx = new java.util.ArrayList<>();
+        java.time.LocalDate now = java.time.LocalDate.now();
+        for (Prescription p : allPrescriptions) {
+            if (p.getValidUntil() == null || !p.getValidUntil().isBefore(now)) {
+                activeRx.add(p);
+            }
+        }
+        model.addAttribute("activePrescriptions", activeRx);
+        
+        return "patient/reminders";
+    }
+
+    @PostMapping("/reminders/preferences")
+    public String updateReminderPreferences(@RequestParam(required = false) String morningTime,
+                                            @RequestParam(required = false) String afternoonTime,
+                                            @RequestParam(required = false) String nightTime,
+                                            @RequestParam(required = false, defaultValue = "false") Boolean enabled,
+                                            HttpSession session, RedirectAttributes ra) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+
+        try {
+            if (morningTime != null && !morningTime.isBlank()) patient.setMorningReminderTime(java.time.LocalTime.parse(morningTime));
+            if (afternoonTime != null && !afternoonTime.isBlank()) patient.setAfternoonReminderTime(java.time.LocalTime.parse(afternoonTime));
+            if (nightTime != null && !nightTime.isBlank()) patient.setNightReminderTime(java.time.LocalTime.parse(nightTime));
+            patient.setMedicineRemindersEnabled(enabled);
+            patientService.update(patient);
+            ra.addFlashAttribute("success", "Medicine reminder preferences saved.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Invalid time format.");
+        }
+        return "redirect:/patient/reminders";
+    }
+
+    @PostMapping("/reminders/add")
+    public String addCustomReminder(@RequestParam String title,
+                                    @RequestParam(required = false) String description,
+                                    @RequestParam String type,
+                                    @RequestParam(required = false) String reminderDate,
+                                    @RequestParam String reminderTime,
+                                    HttpSession session, RedirectAttributes ra) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+
+        try {
+            Reminder reminder = new Reminder();
+            reminder.setPatient(patient);
+            reminder.setTitle(title);
+            reminder.setDescription(description);
+            reminder.setType(type);
+            reminder.setReminderTime(java.time.LocalTime.parse(reminderTime));
+            if ("ONE_TIME".equalsIgnoreCase(type) && reminderDate != null && !reminderDate.isBlank()) {
+                reminder.setReminderDate(java.time.LocalDate.parse(reminderDate));
+            }
+            reminderRepository.save(reminder);
+            ra.addFlashAttribute("success", "Health reminder added.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Failed to add reminder.");
+        }
+        return "redirect:/patient/reminders";
+    }
+
+    @PostMapping("/reminders/{id}/delete")
+    public String deleteCustomReminder(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
+        Patient patient = getSessionPatient(session);
+        if (patient == null) return "redirect:/auth/patient/login";
+
+        Reminder reminder = reminderRepository.findById(id).orElse(null);
+        if (reminder != null && reminder.getPatient().getId().equals(patient.getId())) {
+            reminderRepository.delete(reminder);
+            ra.addFlashAttribute("success", "Reminder deleted.");
+        }
+        return "redirect:/patient/reminders";
     }
 }
 

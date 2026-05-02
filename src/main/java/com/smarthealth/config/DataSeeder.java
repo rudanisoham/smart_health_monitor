@@ -21,10 +21,13 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
 
     @Autowired private UserRepository userRepository;
     @Autowired private DepartmentRepository departmentRepository;
+    @Autowired private com.smarthealth.service.DepartmentService departmentService;
+    @Autowired private com.smarthealth.service.BedService bedService;
     @Autowired private SiteContentRepository siteContentRepository;
     @Autowired private SiteFeatureRepository siteFeatureRepository;
     @Autowired private javax.sql.DataSource dataSource;
     @Autowired private com.smarthealth.repository.jpa.MedicineRepository medicineRepository;
+    @Autowired private com.smarthealth.repository.jpa.LabTestRepository labTestRepository;
 
     private boolean seeded = false;
 
@@ -105,7 +108,7 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
             User admin = new User();
             admin.setFullName("System Admin");
             admin.setEmail("admin@health.com");
-            admin.setPassword(encoder.encode("admin123"));
+            admin.setPassword(encoder.encode(EnvConfig.get("ADMIN_DEFAULT_PASSWORD", "admin123")));
             admin.setRole(Role.ADMIN);
             admin.setPhone("9999999999");
             admin.setActive(true);
@@ -117,7 +120,7 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
             User reception = new User();
             reception.setFullName("Front Desk");
             reception.setEmail("reception@health.com");
-            reception.setPassword(encoder.encode("reception123"));
+            reception.setPassword(encoder.encode(EnvConfig.get("RECEPTION_DEFAULT_PASSWORD", "reception123")));
             reception.setRole(Role.RECEPTIONIST);
             reception.setPhone("8888888888");
             reception.setActive(true);
@@ -129,33 +132,21 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
             User staff = new User();
             staff.setFullName("Medical Staff");
             staff.setEmail("medical@health.com");
-            staff.setPassword(encoder.encode("medical123"));
+            staff.setPassword(encoder.encode(EnvConfig.get("MEDICAL_STAFF_DEFAULT_PASSWORD", "medical123")));
             staff.setRole(Role.MEDICAL_STAFF);
             staff.setPhone("7777777777");
             staff.setActive(true);
             userRepository.save(staff);
         }
 
-        // Seed reception user
-        if (!userRepository.existsByEmail("reception@health.com")) {
-            User reception = new User();
-            reception.setFullName("Front Desk");
-            reception.setEmail("reception@health.com");
-            reception.setPassword(encoder.encode("reception123"));
-            reception.setRole(Role.RECEPTIONIST);
-            reception.setPhone("8888888888");
-            reception.setActive(true);
-            userRepository.save(reception);
-        }
-
         // Seed departments
-        if (departmentRepository.count() == 0) {
+        if (departmentService.count() == 0) {
             String[][] depts = {
-                {"Cardiology", "CARD", "30", "Dr. Patel", "Room 101", "+91-9000000001"},
-                {"Neurology", "NEUR", "25", "Dr. Shah", "Room 202", "+91-9000000002"},
-                {"Orthopedics", "ORTH", "20", "Dr. Mehta", "Room 303", "+91-9000000003"},
-                {"Pediatrics", "PEDI", "35", "Dr. Singh", "Room 404", "+91-9000000004"},
-                {"Emergency", "EMRG", "50", "Dr. Kumar", "Room 001", "+91-9000000005"}
+                {"Cardiology", "CARD", "30", "Dr. Patel", "Room 101", "+91-9000000001", "25", "5"},
+                {"Neurology", "NEUR", "25", "Dr. Shah", "Room 202", "+91-9000000002", "20", "5"},
+                {"Orthopedics", "ORTH", "20", "Dr. Mehta", "Room 303", "+91-9000000003", "15", "5"},
+                {"Pediatrics", "PEDI", "35", "Dr. Singh", "Room 404", "+91-9000000004", "30", "5"},
+                {"Emergency", "EMRG", "50", "Dr. Kumar", "Room 001", "+91-9000000005", "40", "10"}
             };
             for (String[] d : depts) {
                 Department dept = new Department();
@@ -167,8 +158,16 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
                 dept.setHeadName(d[3]);
                 dept.setPhysicalLocation(d[4]);
                 dept.setEmergencyPhone(d[5]);
-                departmentRepository.save(dept);
+                dept.setTotalBeds(Integer.parseInt(d[6]) + Integer.parseInt(d[7]));
+                dept.setAvailableBeds(dept.getTotalBeds());
+                dept.setOccupiedBeds(0);
+                dept.setIcuBeds(Integer.parseInt(d[7]));
+                Department saved = departmentService.save(dept);
+                
+                // Initialize individual bed records
+                bedService.initBedsForDepartment(saved);
             }
+            System.out.println("INFO: Departments and Bed infrastructure seeded.");
         }
 
         // Seed Medicines
@@ -201,7 +200,36 @@ public class DataSeeder implements ApplicationListener<ContextRefreshedEvent> {
                 System.out.println("INFO: Sample medicines seeded.");
             }
         } catch (Exception e) {
-            System.err.println("ERROR: Failed to seed medicines: " + e.getMessage());
+            System.err.println("WARN: Could not seed medicines: " + e.getMessage());
+        }
+
+        // Seed Lab Tests
+        try {
+            com.smarthealth.repository.jpa.LabTestRepository labTestRepo = labTestRepository;
+            if (labTestRepo.count() == 0) {
+                Object[][] tests = {
+                    {"Complete Blood Count (CBC)", "Basic blood panel", 500.0},
+                    {"Lipid Profile", "Cholesterol and triglycerides", 800.0},
+                    {"Liver Function Test (LFT)", "Liver enzymes and bilirubin", 900.0},
+                    {"Thyroid Profile (T3, T4, TSH)", "Thyroid function analysis", 1200.0},
+                    {"Blood Sugar Fasting (FBS)", "Diabetes screening", 200.0},
+                    {"Urine Routine & Microscopy", "Basic urine analysis", 300.0},
+                    {"HbA1c", "3-month average blood sugar", 700.0},
+                    {"X-Ray Chest PA View", "Chest X-Ray", 600.0},
+                    {"ECG", "Electrocardiogram", 400.0},
+                    {"Ultrasound Whole Abdomen", "Abdominal sonography", 1500.0}
+                };
+                for (Object[] t : tests) {
+                    com.smarthealth.model.LabTest labTest = new com.smarthealth.model.LabTest();
+                    labTest.setName((String) t[0]);
+                    labTest.setDescription((String) t[1]);
+                    labTest.setPrice((Double) t[2]);
+                    labTestRepo.save(labTest);
+                }
+                System.out.println("INFO: Lab tests seeded.");
+            }
+        } catch (Exception e) {
+            System.err.println("WARN: Could not seed lab tests: " + e.getMessage());
         }
 
         // Seed Site Content

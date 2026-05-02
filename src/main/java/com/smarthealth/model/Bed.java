@@ -29,6 +29,12 @@ public class Bed {
     @JoinColumn(name = "patient_id")
     private Patient patient;
 
+    @Column(name = "assigned_at")
+    private java.time.LocalDateTime assignedAt;
+
+    @Column(nullable = false)
+    private Double dailyCharge = 500.0; // Default charge
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -47,6 +53,12 @@ public class Bed {
     
     public Patient getPatient() { return patient; }
     public void setPatient(Patient patient) { this.patient = patient; }
+
+    public java.time.LocalDateTime getAssignedAt() { return assignedAt; }
+    public void setAssignedAt(java.time.LocalDateTime assignedAt) { this.assignedAt = assignedAt; }
+
+    public Double getDailyCharge() { return dailyCharge; }
+    public void setDailyCharge(Double dailyCharge) { this.dailyCharge = dailyCharge; }
 
     public enum BedType {
         NORMAL, ICU

@@ -7,10 +7,14 @@
     <title>Medical Staff Login · Smart Health Monitor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/admin.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="login-page">
 <div class="login-card">
     <div class="login-main">
+        <a href="${pageContext.request.contextPath}/" class="btn-back-home">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
         <div class="login-badge">Medical Staff Portal</div>
         <h1 class="login-title">Medical Panel<br>Sign In</h1>
         <p class="login-subtitle">Manage medicines, upload reports, and search patient records.</p>

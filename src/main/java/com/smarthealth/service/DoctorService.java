@@ -16,8 +16,21 @@ public class DoctorService {
     @Autowired
     private DoctorRepository doctorRepository;
 
+    @Autowired
+    private UserService userService;
+
     public Doctor save(Doctor doctor) {
         return doctorRepository.save(doctor);
+    }
+
+    /**
+     * Transactional registration to ensure both User and Doctor are created or neither.
+     */
+    @Transactional
+    public void registerDoctor(com.smarthealth.model.User user, Doctor doctor) {
+        com.smarthealth.model.User savedUser = userService.register(user);
+        doctor.setUser(savedUser);
+        doctorRepository.save(doctor);
     }
 
     public Optional<Doctor> findById(Long id) {
@@ -26,6 +39,10 @@ public class DoctorService {
 
     public Doctor findByUserId(Long userId) {
         return doctorRepository.findByUserId(userId);
+    }
+
+    public boolean existsByLicenseNumber(String licenseNumber) {
+        return doctorRepository.existsByLicenseNumber(licenseNumber);
     }
 
 
@@ -92,6 +109,13 @@ public class DoctorService {
         } else {
             return doctorRepository.findAll();
         }
+    }
+
+    public List<Doctor> findAvailable(String dayOfWeek) {
+        return doctorRepository.findAll().stream()
+            .filter(d -> "ACTIVE".equals(d.getStatus()) && d.isApproved())
+            .filter(d -> d.getAvailableDays() != null && d.getAvailableDays().contains(dayOfWeek))
+            .collect(java.util.stream.Collectors.toList());
     }
 }
 

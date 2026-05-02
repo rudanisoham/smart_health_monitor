@@ -1,8 +1,10 @@
 package com.smarthealth.controller;
 
+import com.smarthealth.model.Doctor;
 import com.smarthealth.model.Patient;
 import com.smarthealth.model.User;
 import com.smarthealth.model.mongo.HealthMetric;
+import com.smarthealth.repository.jpa.BedRepository;
 import com.smarthealth.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,7 @@ public class PatientControllerTest {
     @Mock private MedicalReportService medicalReportService;
     @Mock private SystemLogService systemLogService;
     @Mock private EmailService emailService;
+    @Mock private BedRepository bedRepository;
 
     @InjectMocks
     private PatientController patientController;
@@ -105,6 +108,11 @@ public class PatientControllerTest {
     void shouldCalculateHighRiskMetricAndNotifyEmergency() throws Exception {
         when(patientService.findByUserId(1L)).thenReturn(testPatient);
         testPatient.setEmergencyEmail("emergency@example.com");
+
+        Doctor doc = new Doctor();
+        User docUser = new User(); docUser.setId(2L); docUser.setFullName("Dr Test");
+        doc.setUser(docUser);
+        when(doctorService.findApproved()).thenReturn(java.util.Collections.singletonList(doc));
 
         mockMvc.perform(post("/patient/health/add")
                 .sessionAttr("sessionUser", testUser)

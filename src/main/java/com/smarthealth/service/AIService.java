@@ -11,7 +11,9 @@ import java.util.*;
 @Service
 public class AIService {
 
-    private final String MISTRAL_API_KEY = "";
+    private final String getApiKey() {
+        return com.smarthealth.config.EnvConfig.get("MISTRAL_API_KEY", "");
+    }
     private final String MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
@@ -69,7 +71,7 @@ public class AIService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(MISTRAL_API_KEY);
+            headers.setBearerAuth(getApiKey());
 
             Map<String, Object> body = new HashMap<>();
             body.put("model", "mistral-small-latest");

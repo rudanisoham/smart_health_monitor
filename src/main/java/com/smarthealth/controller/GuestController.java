@@ -24,7 +24,7 @@ public class GuestController {
     @Autowired
     private ContactMessageService contactMessageService;
 
-    @GetMapping("/")
+    @GetMapping({"/", "", "/index"})
     public String landingPage(Model model) {
         System.out.println("DEBUG: GuestController.landingPage() reached at /");
         model.addAttribute("siteContent", siteContentRepository.findFirstByOrderByIdAsc().orElse(null));

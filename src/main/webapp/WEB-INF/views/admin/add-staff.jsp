@@ -1,7 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%
-    request.setAttribute("activePage", request.getParameter("role").equals("RECEPTIONIST") ? "receptionists" : "medical-staff");
+    String roleParam = request.getParameter("role");
+    String ap = "medical-staff";
+    if ("RECEPTIONIST".equals(roleParam)) ap = "receptionists";
+    else if ("LAB_STAFF".equals(roleParam)) ap = "lab-staff";
+    request.setAttribute("activePage", ap);
     request.setAttribute("pageTitle", "Register New Staff Member");
 %>
 <!DOCTYPE html>

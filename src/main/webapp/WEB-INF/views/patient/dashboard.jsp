@@ -87,12 +87,33 @@
                 </div>
             </div>
 
+            <%-- Bed Stay Info --%>
+            <c:if test="${not empty currentBed}">
+                <div class="card mt-4" style="border-left: 4px solid var(--primary); background: linear-gradient(to right, rgba(59,130,246,0.05), #ffffff);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 1.5rem; flex: 1; min-width: 250px;">
+                            <div style="font-size: 2.5rem;">🛌</div>
+                            <div>
+                                <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Current Hospital Stay</div>
+                                <div style="font-size: 1.25rem; font-weight: 700; color: #1e293b;">
+                                    Bed ${currentBed.bedNumber} <span style="font-weight: 400; color: var(--text-muted); font-size: 0.9rem;">— ${currentBed.department.name}</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top:0.25rem;">
+                                    Stay Duration: <strong>${stayDays} Day(s)</strong> | Current Dues: <strong style="color:var(--primary);">₹${totalDue}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="${pageContext.request.contextPath}/patient/billing" class="btn btn-primary" style="font-weight:700; width: 100%; max-width: 200px; justify-content: center; display: flex;">VIEW BILLING</a>
+                    </div>
+                </div>
+            </c:if>
+
             <!-- ── AI Check-in Banner ────────────────────────── -->
             <c:if test="${not empty aiInsight}">
                 <div class="card mb-4" style="background: #ffffff; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border-radius: 20px;">
-                    <div style="display: flex; align-items: center; gap: 1.25rem;">
+                    <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
                         <div style="width: 54px; height: 54px; border-radius: 14px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; flex-shrink: 0;">✨</div>
-                        <div style="flex: 1;">
+                        <div style="flex: 1; min-width: 250px;">
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
                                 <span class="badge-soft" style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-size: 0.65rem;">AI HEALTH ASSISTANT</span>
                                 <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 500;">Just now</span>
@@ -101,7 +122,7 @@
                                 "${aiInsight}"
                             </p>
                         </div>
-                        <a href="${pageContext.request.contextPath}/patient/ai" class="btn btn-outline btn-sm" style="background: #f8fafc; border-color: #e2e8f0; color: #1e293b; font-weight: 700;">Details</a>
+                        <a href="${pageContext.request.contextPath}/patient/ai" class="btn btn-outline btn-sm" style="background: #f8fafc; border-color: #e2e8f0; color: #1e293b; font-weight: 700; width: 100%; justify-content: center; margin-top: 0.5rem; display: flex; max-width: 120px;">Details</a>
                     </div>
                 </div>
             </c:if>

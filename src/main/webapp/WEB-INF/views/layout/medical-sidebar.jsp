@@ -1,4 +1,3 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <aside class="admin-sidebar">
     <div class="sidebar-logo">
         <div class="sidebar-logo-icon">SH</div>
@@ -26,18 +25,6 @@
            class="sidebar-link <%= "medicines".equals(request.getAttribute("activePage")) ? "active" : "" %>">
             <span class="icon"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></span>
             <span class="sidebar-text">Medicine Inventory</span>
-        </a>
-
-        <a href="<%= request.getContextPath() %>/medical/reports"
-           class="sidebar-link <%= "reports".equals(request.getAttribute("activePage")) ? "active" : "" %>">
-            <span class="icon"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
-            <span class="sidebar-text">Reports</span>
-        </a>
-
-        <a href="<%= request.getContextPath() %>/medical/reports/upload"
-           class="sidebar-link <%= "upload".equals(request.getAttribute("activePage")) ? "active" : "" %>">
-            <span class="icon"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
-            <span class="sidebar-text">Upload Report</span>
         </a>
 
         <a href="<%= request.getContextPath() %>/medical/profile"

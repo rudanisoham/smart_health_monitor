@@ -3,7 +3,7 @@
 <%
     request.setAttribute("activePage", "beds");
     request.setAttribute("pageTitle", "Bed Management");
-    request.setAttribute("pageSubtitle", "Assign and release beds across all departments");
+    request.setAttribute("pageSubtitle", "Select a department to manage bed assignments");
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -12,6 +12,47 @@
     <title>Bed Management · Smart Health Monitor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/admin.css?v=3">
+    <style>
+        .dept-card {
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+        .dept-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px -5px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+        }
+        .dept-card::after {
+            content: 'View Beds →';
+            position: absolute;
+            bottom: 1.25rem;
+            right: 1.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #3b82f6;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        .dept-card:hover::after {
+            opacity: 1;
+            right: 1.25rem;
+        }
+        .dept-icon {
+            width: 48px;
+            height: 48px;
+            background: #eff6ff;
+            color: #3b82f6;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+    </style>
 </head>
 <body>
 <div class="admin-app">
@@ -27,134 +68,69 @@
                 <div style="padding:0.75rem 1rem;background:rgba(248,113,113,0.15);border:1px solid #f87171;border-radius:8px;color:#f87171;margin-bottom:1rem;">${error}</div>
             </c:if>
 
-            <!-- Department Bed Summary Cards -->
-            <div class="grid grid-4" style="margin-bottom:2rem;">
+            <%-- Bed Pricing Config --%>
+            <div class="card" style="margin-bottom:2rem; border-left:4px solid var(--primary);">
+                <div class="card-header" style="border-bottom:none; padding-bottom:0.5rem;">
+                    <div>
+                        <div class="section-title">Bed Pricing Configuration</div>
+                        <div class="section-subtitle">Update daily charges for all hospital beds</div>
+                    </div>
+                </div>
+                <form action="<%= request.getContextPath() %>/reception/beds/update-charges" method="post" style="padding:0 1.5rem 1.5rem 1.5rem;">
+                    <div style="display:flex; gap:1.5rem; align-items:flex-end;">
+                        <div class="form-group" style="margin:0; flex:1;">
+                            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Normal Bed (₹/Day)</label>
+                            <input type="number" name="normalCharge" class="form-control" value="${normalCharge}" required min="0" step="0.01">
+                        </div>
+                        <div class="form-group" style="margin:0; flex:1;">
+                            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">ICU Bed (₹/Day)</label>
+                            <input type="number" name="icuCharge" class="form-control" value="${icuCharge}" required min="0" step="0.01">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="height:2.75rem; border-radius:12px; font-weight:700;">UPDATE RATES</button>
+                    </div>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.75rem; font-style:italic;">
+                        * Note: Changes will apply globally to all beds in all departments. Existing bills may be affected upon recalculation.
+                    </p>
+                </form>
+            </div>
+
+            <div class="grid grid-3">
                 <c:forEach var="dept" items="${departments}">
-                    <div class="card">
-                        <div class="card-title">${dept.name}</div>
-                        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+                    <div class="card dept-card" onclick="location.href='<%= request.getContextPath() %>/reception/beds/department/${dept.id}'">
+                        <div class="dept-icon">
+                            <c:choose>
+                                <c:when test="${dept.name.contains('Cardio')}">❤️</c:when>
+                                <c:when test="${dept.name.contains('Neuro')}">🧠</c:when>
+                                <c:when test="${dept.name.contains('Pediat')}">👶</c:when>
+                                <c:when test="${dept.name.contains('Emerg')}">🚨</c:when>
+                                <c:otherwise>🏥</c:otherwise>
+                            </c:choose>
+                        </div>
+                        <div class="card-title" style="font-size:1.1rem;">${dept.name}</div>
+                        
+                        <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">
                             <span class="chip">${dept.availableBeds} Free</span>
                             <span class="chip-danger">${dept.occupiedBeds} Occupied</span>
-                            <c:if test="${dept.icuBeds > 0}"><span class="chip-warning">${dept.icuBeds} ICU</span></c:if>
                         </div>
-                        <div class="progress-container" style="margin-top:0.75rem;">
+
+                        <div class="progress-container" style="margin-top:1.25rem; margin-bottom: 0.5rem;">
                             <c:set var="pct" value="${dept.totalBeds > 0 ? (dept.occupiedBeds * 100 / dept.totalBeds) : 0}"/>
                             <div class="progress-bar-bg">
                                 <div class="progress-bar-fill ${pct > 90 ? 'danger' : (pct > 70 ? 'warning' : 'success')}" style="width:${pct}%;"></div>
                             </div>
-                            <div class="progress-label" style="margin-top:0.35rem;">
-                                <span>${dept.occupiedBeds}/${dept.totalBeds} beds used</span>
-                                <span>${pct}%</span>
+                            <div class="progress-label" style="margin-top:0.5rem;">
+                                <span style="font-size:0.8rem; font-weight:600; color:#64748b;">${dept.occupiedBeds}/${dept.totalBeds} beds assigned</span>
+                                <span style="font-size:0.85rem; font-weight:700; color:#1e293b;">${pct}%</span>
                             </div>
                         </div>
                     </div>
                 </c:forEach>
             </div>
 
-            <!-- Bed Detail Tables per Department -->
-            <c:forEach var="dept" items="${departments}">
-                <div class="card" style="margin-bottom:1.5rem;">
-                    <div class="card-header">
-                        <div>
-                            <div class="section-title">${dept.name} — Beds</div>
-                            <div class="section-subtitle">${dept.availableBeds} available · ${dept.occupiedBeds} occupied · ${dept.totalBeds} total</div>
-                        </div>
-                    </div>
-                    <div class="table-container mt-2">
-                        <table>
-                            <thead>
-                                <tr><th>Bed No.</th><th>Type</th><th>Status</th><th>Patient</th><th class="text-right">Action</th></tr>
-                            </thead>
-                            <tbody>
-                            <c:set var="deptBeds" value="${bedMap[dept.id]}"/>
-                            <c:choose>
-                                <c:when test="${not empty deptBeds}">
-                                    <c:forEach var="bed" items="${deptBeds}">
-                                        <tr>
-                                            <td><strong>${bed.bedNumber}</strong></td>
-                                            <td>
-                                                <c:choose>
-                                                    <c:when test="${bed.type == 'ICU'}"><span class="chip-danger">ICU</span></c:when>
-                                                    <c:otherwise><span class="chip-neutral">Normal</span></c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                            <td>
-                                                <c:choose>
-                                                    <c:when test="${bed.status == 'AVAILABLE'}"><span class="chip">Available</span></c:when>
-                                                    <c:when test="${bed.status == 'OCCUPIED'}"><span class="chip-danger">Occupied</span></c:when>
-                                                    <c:otherwise><span class="chip-warning">Maintenance</span></c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                            <td>
-                                                <c:choose>
-                                                    <c:when test="${bed.patient != null}">${bed.patient.user.fullName}</c:when>
-                                                    <c:otherwise><span class="muted">—</span></c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                            <td class="text-right">
-                                                <c:choose>
-                                                    <c:when test="${bed.status == 'AVAILABLE'}">
-                                                        <button class="btn btn-primary btn-sm" onclick="showAssignModal(${bed.id}, '${bed.bedNumber}')">Assign Patient</button>
-                                                    </c:when>
-                                                    <c:when test="${bed.status == 'OCCUPIED'}">
-                                                        <form action="${pageContext.request.contextPath}/reception/beds/${bed.id}/release" method="post" style="display:inline;">
-                                                            <button class="btn btn-outline btn-sm" type="submit" onclick="return confirm('Release bed ${bed.bedNumber}?')" style="border-color:#ef4444;color:#ef4444;">Release</button>
-                                                        </form>
-                                                    </c:when>
-                                                    <c:otherwise><span class="muted">—</span></c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                        </tr>
-                                    </c:forEach>
-                                </c:when>
-                                <c:otherwise>
-                                    <tr><td colspan="5" class="muted" style="text-align:center;padding:1.5rem;">No beds configured for this department. Add beds via Admin → Departments.</td></tr>
-                                </c:otherwise>
-                            </c:choose>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </c:forEach>
-
         </div>
         <%@ include file="/WEB-INF/views/layout/reception-footer.jsp" %>
     </main>
 </div>
-
-<!-- Assign Patient Modal -->
-<div id="assignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:white;border-radius:1.25rem;padding:2rem;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
-        <div style="font-size:1.2rem;font-weight:700;margin-bottom:0.5rem;">Assign Patient to Bed</div>
-        <div id="modalBedLabel" style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.5rem;"></div>
-        <form id="assignForm" method="post" class="form-grid">
-            <div class="form-group">
-                <label for="patientSelect">Select Patient</label>
-                <select id="patientSelect" name="patientId" class="form-select" required>
-                    <option value="">-- Choose Patient --</option>
-                    <c:forEach var="p" items="${patients}">
-                        <option value="${p.id}">${p.user.fullName} (${p.user.email})</option>
-                    </c:forEach>
-                </select>
-            </div>
-            <div style="display:flex;gap:1rem;margin-top:0.5rem;">
-                <button type="submit" class="btn btn-primary" style="flex:1;">Assign</button>
-                <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeModal()">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-function showAssignModal(bedId, bedNumber) {
-    document.getElementById('assignModal').style.display = 'flex';
-    document.getElementById('modalBedLabel').textContent = 'Bed: ' + bedNumber;
-    document.getElementById('assignForm').action = '<%= request.getContextPath() %>/reception/beds/' + bedId + '/assign';
-}
-function closeModal() {
-    document.getElementById('assignModal').style.display = 'none';
-}
-</script>
 <script src="<%= request.getContextPath() %>/assets/js/admin.js?v=3"></script>
 </body>
 </html>
